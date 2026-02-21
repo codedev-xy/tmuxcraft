@@ -91,8 +91,8 @@ function generateIntermediate(lang: Lang): ChallengeGoal {
     case 'resize': {
       const numPanes = randInt(3, 5)
       const description = lang === 'zh'
-        ? `在当前窗口创建 ${numPanes} 个面板，并使用 even-horizontal 布局排列`
-        : `Create ${numPanes} panes in the current window and arrange them using even-horizontal layout`
+        ? `在当前窗口创建 ${numPanes} 个面板`
+        : `Create ${numPanes} panes in the current window`
       return {
         description,
         optimalSteps: numPanes,
@@ -123,11 +123,11 @@ function generateIntermediate(lang: Lang): ChallengeGoal {
     default: {
       const numPanes = randInt(3, 4)
       const description = lang === 'zh'
-        ? `创建 ${numPanes} 个面板并应用 tiled 布局`
-        : `Create ${numPanes} panes and apply tiled layout`
+        ? `在当前窗口创建 ${numPanes} 个面板`
+        : `Create ${numPanes} panes in the current window`
       return {
         description,
-        optimalSteps: numPanes + 1,
+        optimalSteps: numPanes,
         targetState: {},
         validate: (state) => {
           const win = getActiveSession(state)?.windows[getActiveSession(state)?.activeWindowIndex ?? 0]
@@ -151,6 +151,11 @@ function generateAdvanced(lang: Lang): ChallengeGoal {
       const monitor = state.sessions.find(s => s.name === 'monitor')
       if (!work || !monitor) return false
       if (work.windows.length < 3 || monitor.windows.length < 2) return false
+      // Check window names
+      const workNames = work.windows.map(w => w.name)
+      if (!workNames.includes('code') || !workNames.includes('test') || !workNames.includes('deploy')) return false
+      const monitorNames = monitor.windows.map(w => w.name)
+      if (!monitorNames.includes('logs') || !monitorNames.includes('metrics')) return false
       const allWindows = [...work.windows, ...monitor.windows]
       return allWindows.every(w => countPanes(w.layoutTree) >= 2)
     },

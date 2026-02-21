@@ -54,7 +54,7 @@
     "2-3": { "title": "Swap Panes", "description": "Swap the positions of two panes" },
     "2-4": { "title": "Pane-Window Conversion", "description": "Join and break panes to eliminate the temp window" },
     "2-5": { "title": "Copy Mode", "description": "Enter copy mode and copy text to clipboard" },
-    "2-6": { "title": "Synchronized Panes", "description": "Send commands to all panes at once" },
+    "2-6": { "title": "Synchronized Panes", "description": "Enable pane synchronization so all panes receive input simultaneously" },
     "2-7": { "title": "Session Management", "description": "Create named sessions and switch between them" },
     "2-8": { "title": "Final Exam", "description": "Build a multi-service debug environment" },
     "3-1": { "title": "Key Customization", "description": "Change prefix key and create custom shortcuts" },
@@ -62,7 +62,7 @@
     "3-3": { "title": "Status Bar", "description": "Customize status bar with time and session info" },
     "3-4": { "title": "Config File", "description": "Write and load a tmux config file" },
     "3-5": { "title": "Scripted Setup", "description": "Write a script to auto-create a workspace" },
-    "3-6": { "title": "Advanced Windows", "description": "Move and link windows across sessions" },
+    "3-6": { "title": "Advanced Windows", "description": "Move the window from 'utils' session to 'project' session" },
     "3-7": { "title": "Final Exam", "description": "Write tmux config + startup script" }
   },
   "game": {
@@ -107,7 +107,7 @@
       "3-7-session": "Create a session",
       "3-7-windows": "Create at least 3 windows",
       "3-7-splits": "At least one window with 3+ panes",
-      "3-7-names": "All windows must have custom names"
+      "3-7-names": "All windows must be renamed (not the default 'bash')"
     },
     "hints": {
       "1-1-1": "Type tmux or tmux new -s <name> to create a session",
