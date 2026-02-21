@@ -82,6 +82,13 @@ When adding/modifying levels:
 - Use helper functions from `levels/helpers.ts` to build initial state (`singlePaneState()`, `makeState()`, etc.)
 - Update `CHAPTER_SIZES` in `progress-store.ts` and `CHAPTERS` in `ChapterSelect.tsx` when changing level counts
 
+**Objective clarity requirements** (critical for player experience):
+- Every objective description must tell the player **exactly** what to do. Never use vague phrases like "有意义的名字" (meaningful names) or "指定比例" (specified proportions) when the validator checks for specific values.
+- If the validator checks for specific names, numbers, or targets, the description **must** state them explicitly (e.g., "将窗口命名为 'editor'" not "起有意义的名字").
+- When a level has multiple distinct sub-goals, split into multiple objectives with individual `descriptionKey` entries under `game.objectives.X-Y-key` (see 1-9 and 1-11 as examples). Single-objective levels are fine when the task is genuinely singular and unambiguous.
+- The description shown in the level select screen (`levels.X-Y.description`) should give a clear summary; the per-objective descriptions (`game.objectives.X-Y-key`) provide specific checkable steps.
+- Known weak validators: 3-3 (Status Bar) and 3-4 (Config File) have validators that only check `sessions.length >= 1`, which is effectively a no-op. These need proper validation logic if the levels are reworked.
+
 ### i18n
 
 `react-i18next` with two translation files: `src/i18n/zh.json` and `src/i18n/en.json`. Fallback language is `zh`. All user-facing text uses `t()` keys. tmux commands themselves are never translated.

@@ -276,12 +276,29 @@ const level1_9: LevelDefinition = {
   objectives: [
     {
       id: 'name-editor',
-      descriptionKey: 'levels.1-9.description',
+      descriptionKey: 'game.objectives.1-9-editor',
       validate: (state) => {
         const sess = getActiveSession(state)
         if (!sess) return false
-        const names = sess.windows.map(w => w.name)
-        return names.includes('editor') && names.includes('server') && names.includes('logs')
+        return sess.windows.some(w => w.name === 'editor')
+      },
+    },
+    {
+      id: 'name-server',
+      descriptionKey: 'game.objectives.1-9-server',
+      validate: (state) => {
+        const sess = getActiveSession(state)
+        if (!sess) return false
+        return sess.windows.some(w => w.name === 'server')
+      },
+    },
+    {
+      id: 'name-logs',
+      descriptionKey: 'game.objectives.1-9-logs',
+      validate: (state) => {
+        const sess = getActiveSession(state)
+        if (!sess) return false
+        return sess.windows.some(w => w.name === 'logs')
       },
     },
   ],
