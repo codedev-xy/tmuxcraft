@@ -1,15 +1,12 @@
 import { create } from 'zustand'
-import type { TmuxState } from '@/core/types'
 import type { LevelDefinition, StarRating } from '@/game/level-types'
 
-type Screen = 'home' | 'chapter-select' | 'level-select' | 'game' | 'challenge' | 'challenge-select' | 'achievements' | 'reference' | 'settings'
+type Screen = 'home' | 'chapter-select' | 'level-select' | 'game' | 'challenge' | 'challenge-select' | 'reference' | 'settings'
 
 interface GameState {
   currentScreen: Screen
   currentLevel: LevelDefinition | null
   currentChapter: number
-  tmuxState: TmuxState | null
-  commandHistory: string[]
   commandCount: number
   hintsUsed: number
   comboCount: number
@@ -20,8 +17,7 @@ interface GameState {
   setScreen: (screen: Screen) => void
   setChapter: (chapter: number) => void
   startLevel: (level: LevelDefinition) => void
-  setTmuxState: (state: TmuxState) => void
-  addCommand: (cmd: string) => void
+  addCommand: () => void
   incrementCombo: () => void
   resetCombo: () => void
   useHint: () => void
@@ -33,8 +29,6 @@ export const useGameStore = create<GameState>()((set) => ({
   currentScreen: 'home',
   currentLevel: null,
   currentChapter: 1,
-  tmuxState: null,
-  commandHistory: [],
   commandCount: 0,
   hintsUsed: 0,
   comboCount: 0,
@@ -47,8 +41,6 @@ export const useGameStore = create<GameState>()((set) => ({
 
   startLevel: (level) => set({
     currentLevel: level,
-    tmuxState: level.initialState,
-    commandHistory: [],
     commandCount: 0,
     hintsUsed: 0,
     comboCount: 0,
@@ -58,10 +50,7 @@ export const useGameStore = create<GameState>()((set) => ({
     currentScreen: 'game',
   }),
 
-  setTmuxState: (state) => set({ tmuxState: state }),
-
-  addCommand: (cmd) => set((s) => ({
-    commandHistory: [...s.commandHistory, cmd],
+  addCommand: () => set((s) => ({
     commandCount: s.commandCount + 1,
   })),
 
@@ -76,14 +65,12 @@ export const useGameStore = create<GameState>()((set) => ({
 
   completeLevel: (stars) => set({ isLevelComplete: true, stars }),
 
-  resetLevel: () => set((s) => ({
-    tmuxState: s.currentLevel?.initialState ?? null,
-    commandHistory: [],
+  resetLevel: () => set({
     commandCount: 0,
     hintsUsed: 0,
     comboCount: 0,
     maxCombo: 0,
     isLevelComplete: false,
     stars: { completed: false, efficient: false, noHints: false },
-  })),
+  }),
 }))

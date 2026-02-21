@@ -461,10 +461,27 @@ export class TmuxEngine {
     if (!this.state.clipboard) return
     const win = this.getActiveWindow()
     if (!win) return
-    const pane = Layout.getAllPanes(win.layoutTree).find(p => p.id === win.activePaneId)
-    if (pane) {
-      pane.content.push(this.state.clipboard)
+    const newTree = this.updatePaneInTree(win.layoutTree, win.activePaneId, (pane) => ({
+      ...pane,
+      content: [...pane.content, this.state.clipboard],
+    }))
+    this.updateActiveWindow({ layoutTree: newTree })
+  }
+
+  private updatePaneInTree(node: LayoutNode, paneId: string, updater: (pane: Pane) => Pane): LayoutNode {
+    if (node.type === 'pane' && node.pane?.id === paneId) {
+      return { ...node, pane: updater(node.pane) }
     }
+    if (node.children) {
+      return {
+        ...node,
+        children: [
+          this.updatePaneInTree(node.children[0], paneId, updater),
+          this.updatePaneInTree(node.children[1], paneId, updater),
+        ],
+      }
+    }
+    return node
   }
 
   private setOption(option: string, value: string): void {

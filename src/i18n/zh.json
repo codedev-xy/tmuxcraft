@@ -7,8 +7,7 @@
     "startGame": "学习模式",
     "challenge": "挑战模式",
     "reference": "命令手册",
-    "settings": "设置",
-    "achievements": "成就"
+    "settings": "设置"
   },
   "welcome": {
     "title": "欢迎来到 TmuxCraft!",
@@ -220,25 +219,6 @@
     "date": "挑战时间",
     "time": "用时",
     "noRecords": "暂无记录，成为第一个挑战者！"
-  },
-  "achievements": {
-    "title": "成就",
-    "locked": "未解锁",
-    "beginner": { "title": "初学者", "description": "完成第一个关卡" },
-    "paneMaster": { "title": "面板大师", "description": "一次创建 6 个以上面板" },
-    "speedStar": { "title": "速度之星", "description": "在最优步数内完成任何关卡" },
-    "perfectionist": { "title": "完美主义", "description": "获得任意关卡 3 星" },
-    "chapter1Complete": { "title": "基础毕业", "description": "完成第一章所有关卡" },
-    "chapter2Complete": { "title": "进阶毕业", "description": "完成第二章所有关卡" },
-    "chapter3Complete": { "title": "高手毕业", "description": "完成第三章所有关卡" },
-    "allComplete": { "title": "全部通关", "description": "完成所有关卡" },
-    "challenger": { "title": "挑战者", "description": "完成首次挑战" },
-    "lightning": { "title": "闪电", "description": "挑战模式 30 秒内完成" },
-    "noHints10": { "title": "独立思考", "description": "连续 10 关不使用提示" },
-    "combo5": { "title": "连击达人", "description": "达成 5 连击" },
-    "combo10": { "title": "连击大师", "description": "达成 10 连击" },
-    "allStars": { "title": "满天星斗", "description": "所有关卡获得 3 星" },
-    "dedication": { "title": "坚持不懈", "description": "累计完成 50 个关卡" }
   },
   "reference": {
     "title": "命令手册",

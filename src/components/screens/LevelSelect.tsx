@@ -15,7 +15,7 @@ const CHAPTER_META: Record<number, { emoji: string; color: string; gradient: str
 export function LevelSelect() {
   const { t } = useTranslation()
   const { currentChapter, setScreen, startLevel } = useGameStore()
-  const { levelProgress, isLevelUnlocked, getChapterProgress } = useProgressStore()
+  const { levelProgress, getChapterProgress } = useProgressStore()
 
   const levels = currentChapter === 1 ? chapter1Levels : currentChapter === 2 ? chapter2Levels : chapter3Levels
   const progress = getChapterProgress(currentChapter)
@@ -34,7 +34,45 @@ export function LevelSelect() {
   }
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#f0f4ff' }}>
+    <div className="flex flex-col h-screen relative overflow-hidden" style={{ background: '#f0f4ff' }}>
+      {/* Header bar */}
+      <div
+        className="flex items-center gap-4 shrink-0 relative z-10 glass"
+        style={{
+          padding: '16px 24px',
+          borderBottom: '1px solid rgba(226,232,240,0.8)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        }}
+      >
+        <button
+          onClick={() => setScreen('chapter-select')}
+          className="font-[family-name:var(--font-ui)] font-semibold text-sm cursor-pointer transition-all"
+          style={{
+            padding: '8px 16px',
+            borderRadius: '10px',
+            background: '#ffffff',
+            color: '#64748b',
+            border: '1px solid #e2e8f0',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = '#e2e8f0'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+        >
+          &larr; {t('common.back')}
+        </button>
+        <h1
+          className="font-[family-name:var(--font-pixel)] text-xl"
+          style={{ color: meta.color }}
+        >
+          {meta.emoji} {t(`chapters.chapter${currentChapter}.title`)}
+        </h1>
+      </div>
+
       {/* Two-panel layout */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left sidebar */}
@@ -42,7 +80,7 @@ export function LevelSelect() {
           className="lg:w-[28%] shrink-0 flex flex-col items-center justify-center relative overflow-hidden"
           style={{
             padding: '24px',
-            background: '#ffffff',
+            background: `linear-gradient(180deg, #ffffff 0%, ${meta.lightBg} 100%)`,
             borderRight: '1px solid #e2e8f0',
             boxShadow: '2px 0 12px rgba(0,0,0,0.04)',
           }}
@@ -75,26 +113,8 @@ export function LevelSelect() {
             animate={{ opacity: 1, x: 0 }}
             className="text-center w-full max-w-xs relative z-10"
           >
-            {/* Back button */}
-            <button
-              onClick={() => setScreen('chapter-select')}
-              className="absolute left-0 font-semibold font-[family-name:var(--font-ui)] transition-colors"
-              style={{
-                top: '-8px',
-                padding: '6px 12px',
-                fontSize: '14px',
-                borderRadius: '12px',
-                background: '#f0f4ff',
-                color: '#64748b',
-                border: '1px solid #e2e8f0',
-                cursor: 'pointer',
-              }}
-            >
-              &larr; {t('common.back')}
-            </button>
-
             {/* Chapter emoji */}
-            <div style={{ fontSize: '3rem', marginBottom: '12px', marginTop: '32px' }}>{meta.emoji}</div>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>{meta.emoji}</div>
 
             {/* Chapter number badge */}
             <div
@@ -200,38 +220,33 @@ export function LevelSelect() {
 
         {/* Right main area - level grid */}
         <div
-          className="flex-1 overflow-y-auto flex items-start lg:items-center justify-center"
+          className="flex-1 overflow-y-auto flex items-start lg:items-center justify-center relative"
           style={{ padding: '24px' }}
         >
+          {/* Dot pattern overlay */}
+          <div className="absolute inset-0 bg-dots opacity-[0.03] pointer-events-none" />
           <div
             className="grid grid-cols-2 lg:grid-cols-3 w-full max-w-3xl"
             style={{ gap: '20px' }}
           >
             {levels.map((level, i) => {
-              const unlocked = isLevelUnlocked(level.id)
               const prog = levelProgress[level.id]
               const completed = prog?.completed
               const starCount = prog ? getStarCount(prog) : 0
 
               // Card styles by state
-              const cardBg = completed ? '#f0fdf4' : unlocked ? '#ffffff' : '#f8fafc'
+              const cardBg = completed ? '#f0fdf4' : '#ffffff'
               const cardBorder = completed
                 ? '1px solid #bbf7d0'
-                : unlocked
-                  ? `2px solid ${meta.color}`
-                  : '1px solid #e2e8f0'
+                : `2px solid ${meta.color}`
               const cardShadow = completed
                 ? '0 2px 12px rgba(34, 197, 94, 0.1)'
-                : unlocked
-                  ? `0 2px 12px ${meta.color}18`
-                  : '0 1px 4px rgba(0,0,0,0.04)'
+                : `0 2px 12px ${meta.color}18`
 
               // Badge background by state
               const badgeBg = completed
                 ? '#22c55e'
-                : unlocked
-                  ? meta.color
-                  : '#cbd5e1'
+                : meta.color
 
               return (
                 <motion.button
@@ -239,18 +254,22 @@ export function LevelSelect() {
                   initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.04, type: 'spring', stiffness: 120, damping: 14 }}
-                  whileHover={unlocked ? { y: -6, transition: { duration: 0.15 } } : {}}
-                  whileTap={unlocked ? { scale: 0.96 } : {}}
-                  onClick={() => { if (unlocked) startLevel(level) }}
-                  className={`relative text-left transition-all min-h-[100px] flex items-stretch ${
-                    unlocked ? 'cursor-pointer' : 'cursor-not-allowed'
-                  }`}
+                  whileHover={{ y: -6, transition: { duration: 0.15 } }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => startLevel(level)}
+                  className="relative text-left transition-all min-h-[100px] flex items-stretch cursor-pointer"
                   style={{
                     borderRadius: '16px',
                     background: cardBg,
                     border: cardBorder,
                     boxShadow: cardShadow,
-                    opacity: unlocked ? 1 : 0.6,
+                    transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.boxShadow = `0 8px 32px ${meta.color}25`
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.boxShadow = cardShadow
                   }}
                 >
                   <div
@@ -267,11 +286,7 @@ export function LevelSelect() {
                           background: badgeBg,
                         }}
                       >
-                        {!unlocked ? (
-                          <span className="text-lg">{'\u{1F512}'}</span>
-                        ) : (
-                          i + 1
-                        )}
+                        {i + 1}
                       </div>
 
                       {/* Star display for completed levels */}
@@ -323,18 +338,13 @@ export function LevelSelect() {
                       {t(level.titleKey)}
                     </h3>
 
-                    {/* Optimal steps info for available/completed levels */}
-                    {unlocked && (
-                      <span
-                        className="text-xs font-[family-name:var(--font-ui)] font-semibold"
-                        style={{ color: '#94a3b8' }}
-                      >
-                        {t('game.optimal')}: {level.optimalSteps} {t('game.stepsShort')}
-                      </span>
-                    )}
-
-                    {/* Spacer for locked levels */}
-                    {!unlocked && <div style={{ height: '16px' }} />}
+                    {/* Optimal steps info */}
+                    <span
+                      className="text-xs font-[family-name:var(--font-ui)] font-semibold"
+                      style={{ color: '#94a3b8' }}
+                    >
+                      {t('game.optimal')}: {level.optimalSteps} {t('game.stepsShort')}
+                    </span>
                   </div>
                 </motion.button>
               )

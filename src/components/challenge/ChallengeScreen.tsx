@@ -21,9 +21,9 @@ export function ChallengeScreen() {
   const setScreen = useGameStore(s => s.setScreen)
   const addChallengeRecord = useProgressStore(s => s.addChallengeRecord)
   const checkContextAchievements = useProgressStore(s => s.checkContextAchievements)
-  const username = useUserStore(s => s.username)
+  const language = useUserStore(s => s.language)
 
-  const [goal, setGoal] = useState<ChallengeGoal>(() => generateChallenge('beginner'))
+  const [goal, setGoal] = useState<ChallengeGoal>(() => generateChallenge('beginner', language))
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT)
   const [isRunning, setIsRunning] = useState(true)
   const [isComplete, setIsComplete] = useState(false)
@@ -58,7 +58,6 @@ export function ChallengeScreen() {
       setIsComplete(true)
       const challengeTime = TIME_LIMIT - timeLeft
       addChallengeRecord({
-        username,
         difficulty: 'beginner',
         completedAt: new Date().toISOString(),
         timeSeconds: challengeTime,
@@ -67,7 +66,7 @@ export function ChallengeScreen() {
       })
       checkContextAchievements({ challengeTime })
     }
-  }, [state, goal, isRunning, isComplete, timeLeft, commandCount, username, addChallengeRecord, checkContextAchievements])
+  }, [state, goal, isRunning, isComplete, timeLeft, commandCount, addChallengeRecord, checkContextAchievements])
 
   const handleCommand = useCallback((raw: string) => {
     const result = parser.parseInput(raw)
@@ -98,7 +97,7 @@ export function ChallengeScreen() {
   }
 
   const handleRetry = () => {
-    const newGoal = generateChallenge('beginner')
+    const newGoal = generateChallenge('beginner', language)
     setGoal(newGoal)
     reset()
     setTimeLeft(TIME_LIMIT)
@@ -128,14 +127,21 @@ export function ChallengeScreen() {
       >
         <button
           onClick={() => setScreen('challenge-select')}
-          className="font-[family-name:var(--font-ui)] font-semibold text-sm"
+          className="font-[family-name:var(--font-ui)] font-semibold text-sm cursor-pointer transition-all"
           style={{
             padding: '8px 16px',
-            borderRadius: '12px',
-            background: '#f0f4ff',
+            borderRadius: '10px',
+            background: '#ffffff',
             color: '#64748b',
             border: '1px solid #e2e8f0',
-            cursor: 'pointer',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = '#e2e8f0'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         >
           &larr; {t('common.back')}

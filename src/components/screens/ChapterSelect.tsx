@@ -8,7 +8,6 @@ const CHAPTERS = [
     id: 1,
     emoji: '\u{1F331}',
     total: 11,
-    unlock: 0,
     color: '#0ea5e9',
     gradient: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)',
     lightBg: '#f0f9ff',
@@ -17,7 +16,6 @@ const CHAPTERS = [
     id: 2,
     emoji: '\u26A1',
     total: 8,
-    unlock: 1,
     color: '#8b5cf6',
     gradient: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
     lightBg: '#f5f3ff',
@@ -26,7 +24,6 @@ const CHAPTERS = [
     id: 3,
     emoji: '\u{1F3A8}',
     total: 7,
-    unlock: 2,
     color: '#ec4899',
     gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)',
     lightBg: '#fdf2f8',
@@ -40,9 +37,6 @@ export function ChapterSelect() {
   const getChapterProgress = useProgressStore(s => s.getChapterProgress)
   const levelProgress = useProgressStore(s => s.levelProgress)
 
-  const isUnlocked = (chapter: typeof CHAPTERS[0]) =>
-    chapter.unlock === 0 || chaptersCompleted.includes(chapter.unlock)
-
   const getTotalStars = (chapterId: number) => {
     return Object.entries(levelProgress).reduce((sum, [id, prog]) => {
       const [ch] = id.split('-')
@@ -52,28 +46,60 @@ export function ChapterSelect() {
   }
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#f0f4ff' }}>
+    <div className="flex flex-col h-screen relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e8eeff 50%, #f0f4ff 100%)' }}>
+      {/* ─── Decorative background blobs ─── */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          top: '-8%',
+          left: '-6%',
+          width: '35%',
+          height: '35%',
+          background: 'radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%)',
+          filter: 'blur(70px)',
+          animation: 'float-slow 9s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          bottom: '-5%',
+          right: '-4%',
+          width: '30%',
+          height: '30%',
+          background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          animation: 'float-slow 11s ease-in-out infinite reverse',
+        }}
+      />
+      <div className="absolute inset-0 bg-dots opacity-[0.03] pointer-events-none" />
+
       {/* Header */}
       <div
-        className="flex items-center shrink-0"
+        className="flex items-center gap-4 shrink-0 relative z-10 glass"
         style={{
           padding: '16px 24px',
-          gap: '16px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid rgba(226,232,240,0.8)',
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}
       >
         <button
           onClick={() => setScreen('home')}
-          className="font-[family-name:var(--font-ui)] font-semibold text-sm"
+          className="font-[family-name:var(--font-ui)] font-semibold text-sm cursor-pointer transition-all"
           style={{
             padding: '8px 16px',
-            borderRadius: '12px',
-            background: '#f0f4ff',
+            borderRadius: '10px',
+            background: '#ffffff',
             color: '#64748b',
             border: '1px solid #e2e8f0',
-            cursor: 'pointer',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = '#e2e8f0'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         >
           &larr; {t('common.back')}
@@ -81,9 +107,9 @@ export function ChapterSelect() {
         <div className="flex flex-col">
           <h1
             className="font-[family-name:var(--font-pixel)] text-lg font-bold"
-            style={{ color: '#1e293b' }}
+            style={{ color: '#0ea5e9' }}
           >
-            {t('chapters.select')}
+            {'\uD83D\uDCD6'} {t('chapters.select')}
           </h1>
           <p
             className="font-[family-name:var(--font-ui)] text-xs"
@@ -96,7 +122,7 @@ export function ChapterSelect() {
 
       {/* Content */}
       <div
-        className="flex-1 flex items-center justify-center overflow-y-auto"
+        className="flex-1 flex items-center justify-center overflow-y-auto relative z-10"
         style={{ padding: '24px' }}
       >
         <div
@@ -104,7 +130,6 @@ export function ChapterSelect() {
           style={{ gap: '24px' }}
         >
           {CHAPTERS.map((chapter, i) => {
-            const unlocked = isUnlocked(chapter)
             const progress = getChapterProgress(chapter.id)
             const pct = Math.round((progress.completed / progress.total) * 100)
             const stars = getTotalStars(chapter.id)
@@ -117,26 +142,27 @@ export function ChapterSelect() {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.15, type: 'spring', stiffness: 100, damping: 14 }}
-                whileHover={unlocked ? { y: -8, transition: { duration: 0.2 } } : {}}
-                whileTap={unlocked ? { scale: 0.97 } : {}}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => {
-                  if (unlocked) {
-                    setChapter(chapter.id)
-                    setScreen('level-select')
-                  }
+                  setChapter(chapter.id)
+                  setScreen('level-select')
                 }}
-                className={`relative flex-1 flex flex-col items-center text-center overflow-hidden transition-all min-h-[320px] ${
-                  unlocked
-                    ? 'cursor-pointer'
-                    : 'cursor-not-allowed'
-                }`}
+                className="relative flex-1 flex flex-col items-center text-center overflow-hidden transition-all min-h-[320px] cursor-pointer"
                 style={{
                   borderRadius: '20px',
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
-                  boxShadow: unlocked
-                    ? '0 2px 12px rgba(0,0,0,0.06)'
-                    : '0 1px 4px rgba(0,0,0,0.04)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow = `0 8px 32px ${chapter.color}25`
+                  e.currentTarget.style.borderColor = `${chapter.color}40`
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'
+                  e.currentTarget.style.borderColor = '#e2e8f0'
                 }}
               >
                 {/* Colorful gradient header strip */}
@@ -146,7 +172,6 @@ export function ChapterSelect() {
                     height: '144px',
                     background: chapter.gradient,
                     borderRadius: '19px 19px 0 0',
-                    opacity: unlocked ? 1 : 0.4,
                   }}
                 >
                   {/* Light overlay for depth */}
@@ -171,39 +196,8 @@ export function ChapterSelect() {
                   </div>
                 </div>
 
-                {/* Lock overlay for locked cards */}
-                {!unlocked && (
-                  <div
-                    className="absolute inset-0 z-10 flex flex-col items-center justify-center"
-                    style={{
-                      borderRadius: '20px',
-                      background: 'rgba(255, 255, 255, 0.7)',
-                    }}
-                  >
-                    <div
-                      className="flex flex-col items-center"
-                      style={{
-                        padding: '16px 24px',
-                        gap: '8px',
-                        borderRadius: '16px',
-                        background: '#ffffff',
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-                        border: '1px solid #e2e8f0',
-                      }}
-                    >
-                      <span className="text-5xl" style={{ color: '#94a3b8' }}>{'\u{1F512}'}</span>
-                      <span
-                        className="font-[family-name:var(--font-ui)] text-sm font-semibold"
-                        style={{ color: '#94a3b8' }}
-                      >
-                        {t('chapters.unlockPrevious')}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
                 {/* CLEAR badge */}
-                {unlocked && isCleared && (
+                {isCleared && (
                   <motion.div
                     initial={{ scale: 0, rotate: -12 }}
                     animate={{ scale: 1, rotate: -12 }}
@@ -225,7 +219,6 @@ export function ChapterSelect() {
                   className="flex flex-col items-center flex-1 w-full"
                   style={{
                     padding: '20px 24px 24px',
-                    opacity: unlocked ? 1 : 0.4,
                   }}
                 >
                   {/* Title */}

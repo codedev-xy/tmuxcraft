@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PaneRenderer } from './PaneRenderer'
@@ -9,7 +9,6 @@ import { CommandParser } from '@/core/command-parser'
 import { validateLevel } from '@/game/validator'
 import { calculateStars } from '@/game/scoring'
 import { getHint } from '@/game/hint-system'
-import { countPanes } from '@/core/layout-engine'
 import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
 import { chapter1Levels } from '@/game/levels/chapter1'
@@ -39,31 +38,27 @@ const kbdStyle: React.CSSProperties = {
 }
 
 /**
+ * Pre-compiled regex for hint text parsing.
+ * Matches keyboard shortcuts and commands to wrap in <kbd> elements.
+ */
+const HINT_PATTERN = new RegExp(
+  [
+    /Ctrl\+b\s+Ctrl\+(?:方向键|[a-zA-Z0-9→←↑↓]+)/.source,                  // Ctrl+b Ctrl+→ / Ctrl+b Ctrl+方向键
+    /Ctrl\+b\s+(?:Space|方向键|Arrow|数字)/.source,                       // Ctrl+b Space
+    /Ctrl\+b\s+\S(?:\/\S)?/.source,                                     // Ctrl+b , | Ctrl+b " | Ctrl+b n/p
+    /:[a-z][-a-z]*(?:\s+[-a-zA-Z0-9<>~%\/.':_]+)*/.source,              // :split-window -h
+    /tmux\s+(?:new(?:\s+-s\s+\S+)?|attach(?:\s+-t\s+\S+)?|ls)/.source,  // tmux new -s name
+    /\bexit\b/.source,                                                    // exit
+  ].join('|'),
+  'g',
+)
+
+/**
  * Parse hint text and wrap keyboard shortcuts / commands in styled <kbd> elements.
- *
- * Key handling for "Ctrl+b ," style shortcuts:
- * - After "Ctrl+b " we explicitly match ANY single char (including , " % ! etc.)
- *   or multi-char keys like Space, 方向键, Ctrl+→, n/p, 数字
  */
 function renderHintText(text: string): React.ReactNode {
-  // Order matters — longer / more specific patterns first.
-  // Group 1: Ctrl+b + Ctrl+<key>  (e.g. Ctrl+b Ctrl+→, Ctrl+b Ctrl+方向键)
-  // Group 2: Ctrl+b + multi-char key (Space, 方向键, Arrow) or slash pair (n/p)
-  // Group 3: Ctrl+b + single char (covers , " % ! { } [ ] x z d c → ↓ digits etc.)
-  // Group 4: Colon commands  :xxx ...args
-  // Group 5: tmux CLI commands
-  // Group 6: standalone "exit"
-  const pattern = new RegExp(
-    [
-      /Ctrl\+b\s+Ctrl\+(?:方向键|[a-zA-Z0-9→←↑↓]+)/.source,                  // Ctrl+b Ctrl+→ / Ctrl+b Ctrl+方向键
-      /Ctrl\+b\s+(?:Space|方向键|Arrow|数字)/.source,                       // Ctrl+b Space
-      /Ctrl\+b\s+\S(?:\/\S)?/.source,                                     // Ctrl+b , | Ctrl+b " | Ctrl+b n/p
-      /:[a-z][-a-z]*(?:\s+[-a-zA-Z0-9<>~%\/.':_]+)*/.source,              // :split-window -h
-      /tmux\s+(?:new(?:\s+-s\s+\S+)?|attach(?:\s+-t\s+\S+)?|ls)/.source,  // tmux new -s name
-      /\bexit\b/.source,                                                    // exit
-    ].join('|'),
-    'g',
-  )
+  const pattern = HINT_PATTERN
+  pattern.lastIndex = 0 // Reset stateful regex before use
 
   const parts: React.ReactNode[] = []
   let lastIndex = 0
@@ -112,7 +107,6 @@ export function GameScreen() {
   const { t } = useTranslation()
   const { currentLevel, commandCount, hintsUsed, comboCount, isLevelComplete, addCommand, incrementCombo, resetCombo, useHint: markHintUsed, completeLevel: markComplete, resetLevel, setScreen, startLevel } = useGameStore()
   const completeLevel = useProgressStore(s => s.completeLevel)
-  const checkContextAchievements = useProgressStore(s => s.checkContextAchievements)
 
   const [input, setInput] = useState('')
   const [commandHistory, setCommandHistory] = useState<string[]>([])
@@ -129,6 +123,12 @@ export function GameScreen() {
   const outputRef = useRef<HTMLDivElement>(null)
 
   const { state, execute, reset } = useTmuxEngine(currentLevel?.initialState)
+
+  // Memoize validation so it's computed once per state change, not 3x per render
+  const validation = useMemo(
+    () => currentLevel ? validateLevel(state, currentLevel) : { isComplete: false, progress: 0, completedObjectives: [] as string[], remainingObjectives: [] as string[] },
+    [state, currentLevel]
+  )
 
   // Reset local state when level changes
   useEffect(() => {
@@ -153,7 +153,7 @@ export function GameScreen() {
 
   const handleCommand = useCallback((cmd: ParsedCommand) => {
     execute(cmd)
-    addCommand(cmd.raw)
+    addCommand()
     setError('')
     incrementCombo()
   }, [execute, addCommand, incrementCombo])
@@ -176,18 +176,16 @@ export function GameScreen() {
   // Validate after each command (skip when no commands executed to avoid race conditions on level transitions)
   useEffect(() => {
     if (!currentLevel || isLevelComplete || commandCount === 0) return
-    const validation = validateLevel(state, currentLevel)
     if (validation.isComplete) {
       const stars = calculateStars(commandCount, currentLevel.optimalSteps, hintsUsed)
       markComplete(stars)
       completeLevel(currentLevel.id, stars, commandCount)
     }
-  }, [state, currentLevel, isLevelComplete, commandCount, hintsUsed, markComplete, completeLevel])
+  }, [validation, currentLevel, isLevelComplete, commandCount, hintsUsed, markComplete, completeLevel])
 
   // Detect newly completed objectives for flash effect
   useEffect(() => {
     if (!currentLevel || commandCount === 0) return
-    const validation = validateLevel(state, currentLevel)
     const newlyCompleted = validation.completedObjectives.filter(id => !prevCompleted.includes(id))
     if (newlyCompleted.length > 0) {
       setObjectiveFlash(true)
@@ -195,16 +193,7 @@ export function GameScreen() {
       const timer = setTimeout(() => setObjectiveFlash(false), 600)
       return () => clearTimeout(timer)
     }
-  }, [state, currentLevel, commandCount, prevCompleted])
-
-  // Check context-dependent achievements (combo, pane count)
-  useEffect(() => {
-    if (commandCount === 0) return
-    const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
-    const activeWindow = activeSession?.windows[activeSession.activeWindowIndex]
-    const paneCount = activeWindow ? countPanes(activeWindow.layoutTree) : 0
-    checkContextAchievements({ currentCombo: comboCount, currentPaneCount: paneCount })
-  }, [comboCount, state, commandCount, checkContextAchievements])
+  }, [validation, currentLevel, commandCount, prevCompleted])
 
   const handleSubmit = useCallback(() => {
     if (!input.trim()) return
@@ -215,43 +204,53 @@ export function GameScreen() {
     const result = parser.parseInput(trimmed)
     if (isParseError(result)) {
       setError(result.message)
-      setOutput(prev => [...prev, `$ ${trimmed}`, `Error: ${result.message}`])
+      setOutput(prev => [...prev, `$ ${trimmed}`, `Error: ${result.message}`].slice(-50))
       resetCombo()
       // Shake effect on error
       setTerminalShake(true)
       setTimeout(() => setTerminalShake(false), 400)
     } else {
-      setOutput(prev => [...prev, `$ ${trimmed}`])
+      setOutput(prev => [...prev, `$ ${trimmed}`].slice(-50))
       handleCommand(result)
     }
     setInput('')
   }, [input, handleCommand, resetCombo])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleSubmit()
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      if (commandHistory.length > 0) {
-        const newIndex = historyIndex < 0 ? commandHistory.length - 1 : Math.max(0, historyIndex - 1)
-        setHistoryIndex(newIndex)
-        setInput(commandHistory[newIndex])
-      }
+      setCommandHistory(prev => {
+        if (prev.length > 0) {
+          setHistoryIndex(idx => {
+            const newIndex = idx < 0 ? prev.length - 1 : Math.max(0, idx - 1)
+            setInput(prev[newIndex])
+            return newIndex
+          })
+        }
+        return prev
+      })
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
-      if (historyIndex >= 0) {
-        const newIndex = historyIndex + 1
-        if (newIndex >= commandHistory.length) {
-          setHistoryIndex(-1)
-          setInput('')
-        } else {
-          setHistoryIndex(newIndex)
-          setInput(commandHistory[newIndex])
+      setHistoryIndex(idx => {
+        if (idx >= 0) {
+          const newIndex = idx + 1
+          setCommandHistory(prev => {
+            if (newIndex >= prev.length) {
+              setInput('')
+            } else {
+              setInput(prev[newIndex])
+            }
+            return prev
+          })
+          return newIndex >= commandHistory.length ? -1 : newIndex
         }
-      }
+        return idx
+      })
     }
-  }
+  }, [handleSubmit, commandHistory.length])
 
   const handleHint = () => {
     if (!currentLevel || currentHintLevel >= 3) return
@@ -276,7 +275,6 @@ export function GameScreen() {
 
   const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
   const activeWindow = activeSession?.windows[activeSession.activeWindowIndex]
-  const validation = validateLevel(state, currentLevel)
   const completedCount = commandCount > 0 ? validation.completedObjectives.length : 0
   const totalObjectives = currentLevel.objectives.length
   const progressRatio = totalObjectives > 0 ? completedCount / totalObjectives : 0
@@ -775,76 +773,224 @@ export function GameScreen() {
 
       {/* Level Complete Modal */}
       <AnimatePresence>
-        {isLevelComplete && (
+        {isLevelComplete && (() => {
+          const stars = calculateStars(commandCount, currentLevel!.optimalSteps, hintsUsed)
+          const starCount = (stars.completed ? 1 : 0) + (stars.efficient ? 1 : 0) + (stars.noHints ? 1 : 0)
+          const isPerfect = starCount === 3
+          return (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 flex items-center justify-center z-50"
-            style={{
-              background: 'rgba(0, 0, 0, 0.3)',
-            }}
+            style={{ background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)' }}
           >
+            {/* Confetti particles */}
+            {Array.from({ length: isPerfect ? 24 : 12 }).map((_, i) => (
+              <motion.div
+                key={`confetti-${i}`}
+                initial={{
+                  opacity: 1,
+                  x: 0, y: 0,
+                  scale: Math.random() * 0.5 + 0.5,
+                }}
+                animate={{
+                  opacity: [1, 1, 0],
+                  x: (Math.random() - 0.5) * 500,
+                  y: Math.random() * -300 - 100,
+                  rotate: Math.random() * 720 - 360,
+                }}
+                transition={{
+                  duration: 1.8 + Math.random() * 0.8,
+                  delay: Math.random() * 0.4,
+                  ease: [0.2, 0.8, 0.4, 1],
+                }}
+                style={{
+                  position: 'absolute',
+                  width: `${Math.random() * 8 + 4}px`,
+                  height: `${Math.random() * 8 + 4}px`,
+                  borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                  background: ['#f59e0b', '#0ea5e9', '#ec4899', '#10b981', '#8b5cf6', '#f97316'][i % 6],
+                }}
+              />
+            ))}
+
             <motion.div
-              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              initial={{ scale: 0.6, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="text-center"
+              transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.1 }}
+              className="text-center relative"
               style={{
-                padding: '32px',
-                maxWidth: '384px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '20px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+                padding: '36px 40px 32px',
+                width: '380px',
+                maxWidth: '90vw',
+                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                borderRadius: '24px',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255,255,255,0.1)',
+                overflow: 'hidden',
               }}
             >
-              <div className="text-3xl" style={{ marginBottom: '8px' }}>{'\uD83C\uDF89'}</div>
-              <h2 className="font-[family-name:var(--font-pixel)] text-lg" style={{ marginBottom: '24px', color: '#0ea5e9' }}>
-                {t('game.levelComplete')}
-              </h2>
-              <div className="flex justify-center" style={{ gap: '24px', marginBottom: '24px' }}>
-                {['completed', 'efficient', 'noHints'].map((key, i) => {
-                  const stars = calculateStars(commandCount, currentLevel!.optimalSteps, hintsUsed)
+              {/* Top accent bar */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
+                background: isPerfect
+                  ? 'linear-gradient(90deg, #f59e0b, #ec4899, #8b5cf6, #0ea5e9, #10b981)'
+                  : 'linear-gradient(90deg, #0ea5e9, #38bdf8)',
+              }} />
+
+              {/* Title */}
+              <motion.div
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h2 className="font-[family-name:var(--font-pixel)]"
+                  style={{ fontSize: '20px', color: '#0f172a', marginBottom: '4px' }}
+                >
+                  {t('game.levelComplete')}
+                </h2>
+                <p className="font-[family-name:var(--font-ui)]"
+                  style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '24px' }}
+                >
+                  {currentLevel?.titleKey ? t(currentLevel.titleKey) : ''}
+                </p>
+              </motion.div>
+
+              {/* Stars */}
+              <div className="flex justify-center items-end" style={{ gap: '20px', marginBottom: '24px' }}>
+                {(['completed', 'efficient', 'noHints'] as const).map((key, i) => {
                   const earned = key === 'completed' ? stars.completed : key === 'efficient' ? stars.efficient : stars.noHints
                   return (
-                    <div key={key} className="text-center">
-                      <motion.span
-                        initial={{ scale: 0, rotate: -30 }}
-                        animate={{ scale: earned ? 1 : 0.7, rotate: 0 }}
-                        transition={{ delay: i * 0.2, type: 'spring' }}
-                        className="text-3xl block"
-                        style={{
-                          color: earned ? '#f59e0b' : '#cbd5e1',
-                          filter: earned ? 'none' : 'grayscale(1)',
-                          opacity: earned ? 1 : 0.4,
-                        }}
-                      >
-                        {'\u2B50'}
-                      </motion.span>
+                    <motion.div
+                      key={key}
+                      initial={{ scale: 0, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      transition={{ delay: 0.3 + i * 0.15, type: 'spring', stiffness: 400, damping: 15 }}
+                      className="text-center"
+                      style={{ width: '90px' }}
+                    >
+                      <div style={{
+                        position: 'relative',
+                        display: 'inline-block',
+                        marginBottom: '8px',
+                      }}>
+                        {/* Glow behind earned star */}
+                        {earned && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: [0.4, 0.7, 0.4], scale: 1 }}
+                            transition={{ delay: 0.5 + i * 0.15, duration: 2, repeat: Infinity }}
+                            style={{
+                              position: 'absolute', inset: '-8px',
+                              borderRadius: '50%',
+                              background: 'radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%)',
+                            }}
+                          />
+                        )}
+                        <span style={{
+                          fontSize: earned ? '36px' : '28px',
+                          display: 'block',
+                          filter: earned ? 'drop-shadow(0 2px 6px rgba(245,158,11,0.4))' : 'grayscale(1)',
+                          opacity: earned ? 1 : 0.25,
+                          transition: 'all 0.3s',
+                        }}>
+                          {'\u2B50'}
+                        </span>
+                      </div>
                       <span
-                        className="font-[family-name:var(--font-pixel)] block"
-                        style={{ fontSize: '9px', marginTop: '8px', color: '#94a3b8' }}
+                        className="font-[family-name:var(--font-ui)] block"
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: earned ? 600 : 400,
+                          color: earned ? '#334155' : '#cbd5e1',
+                          lineHeight: 1.2,
+                        }}
                       >
                         {t(`game.stars.${key}`)}
                       </span>
-                    </div>
+                    </motion.div>
                   )
                 })}
               </div>
-              <div className="flex justify-center" style={{ gap: '12px' }}>
+
+              {/* Stats */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="flex justify-center"
+                style={{
+                  gap: '2px',
+                  marginBottom: '28px',
+                  background: '#f1f5f9',
+                  borderRadius: '12px',
+                  padding: '10px 0',
+                }}
+              >
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="font-[family-name:var(--font-mono)]"
+                    style={{ fontSize: '18px', fontWeight: 700, color: '#0ea5e9' }}
+                  >
+                    {commandCount}
+                  </div>
+                  <div className="font-[family-name:var(--font-ui)]"
+                    style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}
+                  >
+                    {t('game.commands')}
+                  </div>
+                </div>
+                <div style={{ width: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="font-[family-name:var(--font-mono)]"
+                    style={{ fontSize: '18px', fontWeight: 700, color: '#10b981' }}
+                  >
+                    {currentLevel!.optimalSteps}
+                  </div>
+                  <div className="font-[family-name:var(--font-ui)]"
+                    style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}
+                  >
+                    {t('game.optimal')}
+                  </div>
+                </div>
+                <div style={{ width: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="font-[family-name:var(--font-mono)]"
+                    style={{ fontSize: '18px', fontWeight: 700, color: '#f59e0b' }}
+                  >
+                    {starCount}/3
+                  </div>
+                  <div className="font-[family-name:var(--font-ui)]"
+                    style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}
+                  >
+                    {'\u2B50'}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="flex justify-center"
+                style={{ gap: '10px' }}
+              >
                 <button
                   onClick={handleRetry}
-                  className="text-xs font-[family-name:var(--font-ui)]"
+                  className="font-[family-name:var(--font-ui)]"
                   style={{
-                    padding: '8px 20px',
+                    padding: '10px 24px',
+                    fontSize: '13px',
+                    fontWeight: 500,
                     background: '#ffffff',
-                    border: '1px solid #e2e8f0',
+                    border: '1.5px solid #e2e8f0',
                     borderRadius: '12px',
                     color: '#64748b',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#ffffff' }}
                 >
                   {t('game.retry')}
                 </button>
@@ -857,24 +1003,28 @@ export function GameScreen() {
                     setScreen('level-select')
                   }
                 }}
-                  className="text-xs font-[family-name:var(--font-ui)] font-bold"
+                  className="font-[family-name:var(--font-ui)] font-bold"
                   style={{
-                    padding: '8px 20px',
+                    padding: '10px 28px',
+                    fontSize: '13px',
                     borderRadius: '12px',
                     background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
                     color: '#ffffff',
                     border: 'none',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(14, 165, 233, 0.3)',
+                    boxShadow: '0 4px 14px rgba(14, 165, 233, 0.35)',
                     transition: 'all 0.2s',
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(14, 165, 233, 0.45)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(14, 165, 233, 0.35)'; e.currentTarget.style.transform = 'translateY(0)' }}
                 >
-                  {t('game.nextLevel')}
+                  {t('game.nextLevel')} {'\u2192'}
                 </button>
-              </div>
+              </motion.div>
             </motion.div>
           </motion.div>
-        )}
+          )
+        })()}
       </AnimatePresence>
     </div>
   )

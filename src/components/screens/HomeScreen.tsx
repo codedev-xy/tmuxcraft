@@ -1,41 +1,40 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useGameStore } from '@/store/game-store'
 import { useUserStore } from '@/store/user-store'
 import { useProgressStore } from '@/store/progress-store'
 
-// ─── Menu items (light playful theme) ───
+// ─── Three main entries ───
 
-const MENU_CARDS = [
+const MAIN_CARDS = [
   {
-    key: 'achievements',
-    screen: 'achievements' as const,
-    emoji: '\uD83C\uDFC6',
-    borderTopColor: '#f59e0b',
-    hoverBorderColor: '#fbbf24',
-    hoverShadow: '0 8px 24px rgba(245, 158, 11, 0.15)',
-    iconBg: 'rgba(245, 158, 11, 0.08)',
-    titleColor: '#d97706',
+    key: 'startGame',
+    screen: 'chapter-select' as const,
+    emoji: '\uD83D\uDCD6',
+    gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+    shadowBase: '0 6px 0 #0369a1, 0 8px 20px rgba(14, 165, 233, 0.25)',
+    glowColor: 'rgba(14,165,233,0.3)',
+    iconBg: 'rgba(14, 165, 233, 0.1)',
+    titleColor: '#0284c7',
   },
   {
-    key: 'reference',
-    screen: 'reference' as const,
-    emoji: '\uD83D\uDCD6',
-    borderTopColor: '#0ea5e9',
-    hoverBorderColor: '#38bdf8',
-    hoverShadow: '0 8px 24px rgba(14, 165, 233, 0.15)',
-    iconBg: 'rgba(14, 165, 233, 0.08)',
-    titleColor: '#0284c7',
+    key: 'challenge',
+    screen: 'challenge-select' as const,
+    emoji: '\uD83C\uDFAF',
+    gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    shadowBase: '0 6px 0 #b45309, 0 8px 20px rgba(245, 158, 11, 0.25)',
+    glowColor: 'rgba(245,158,11,0.3)',
+    iconBg: 'rgba(245, 158, 11, 0.1)',
+    titleColor: '#d97706',
   },
   {
     key: 'settings',
     screen: 'settings' as const,
     emoji: '\u2699\uFE0F',
-    borderTopColor: '#64748b',
-    hoverBorderColor: '#94a3b8',
-    hoverShadow: '0 8px 24px rgba(100, 116, 139, 0.15)',
-    iconBg: 'rgba(100, 116, 139, 0.08)',
+    gradient: 'linear-gradient(135deg, #64748b, #475569)',
+    shadowBase: '0 6px 0 #334155, 0 8px 20px rgba(100, 116, 139, 0.25)',
+    glowColor: 'rgba(100,116,139,0.3)',
+    iconBg: 'rgba(100, 116, 139, 0.1)',
     titleColor: '#475569',
   },
 ]
@@ -45,20 +44,9 @@ const MENU_CARDS = [
 export function HomeScreen() {
   const { t, i18n } = useTranslation()
   const setScreen = useGameStore(s => s.setScreen)
-  const {
-    username,
-    isFirstVisit,
-    setUsername,
-    generateRandomUsername,
-    completeFirstVisit,
-    language,
-    setLanguage,
-  } = useUserStore()
+  const { language, setLanguage } = useUserStore()
   const levelProgress = useProgressStore(s => s.levelProgress)
   const getChapterProgress = useProgressStore(s => s.getChapterProgress)
-
-  const [showWelcome, setShowWelcome] = useState(isFirstVisit)
-  const [nameInput, setNameInput] = useState('')
 
   // Compute player stats
   const totalCompleted = Object.values(levelProgress).filter(l => l.completed).length
@@ -71,140 +59,161 @@ export function HomeScreen() {
   const ch2 = getChapterProgress(2)
   const ch3 = getChapterProgress(3)
 
-  const handleStartWelcome = () => {
-    const name = nameInput.trim() || generateRandomUsername()
-    setUsername(name)
-    completeFirstVisit()
-    setShowWelcome(false)
-  }
-
-  const handleLanguageToggle = () => {
-    const newLang = language === 'zh' ? 'en' : 'zh'
-    setLanguage(newLang)
-    i18n.changeLanguage(newLang)
-  }
-
   return (
     <div
       className="flex flex-col h-screen w-full relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #f0f4ff 100%)' }}
     >
-      {/* ─── Top bar: greeting + language toggle ─── */}
+      {/* ─── Decorative background blobs ─── */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          top: '-10%',
+          left: '-5%',
+          width: '40%',
+          height: '40%',
+          background: 'radial-gradient(circle, rgba(14,165,233,0.15) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+          animation: 'float-slow 8s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          bottom: '-8%',
+          right: '-3%',
+          width: '35%',
+          height: '35%',
+          background: 'radial-gradient(circle, rgba(236,72,153,0.12) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          animation: 'float-slow 10s ease-in-out infinite reverse',
+        }}
+      />
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          top: '40%',
+          right: '15%',
+          width: '20%',
+          height: '20%',
+          background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)',
+          filter: 'blur(50px)',
+          animation: 'gradient-shift 12s ease-in-out infinite',
+        }}
+      />
+      {/* Dot pattern overlay */}
+      <div className="absolute inset-0 bg-dots opacity-[0.03] pointer-events-none" />
+
+      {/* ─── Top bar: stats + language toggle ─── */}
       <div
         className="relative z-10 flex items-center justify-between shrink-0"
-        style={{ padding: '20px 24px 8px 24px' }}
+        style={{ padding: '16px 24px 8px 24px' }}
       >
-        {username && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3"
-          >
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, #0ea5e9, #8b5cf6)',
-                boxShadow: '0 2px 8px rgba(14, 165, 233, 0.3)',
-              }}
+        {/* Player stats (left side) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {totalCompleted > 0 && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-2"
             >
-              {username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p
-                className="font-[family-name:var(--font-ui)] text-sm"
-                style={{ color: '#64748b' }}
+              <div
+                className="flex items-center gap-1.5 rounded-full text-sm"
+                style={{
+                  padding: '5px 10px',
+                  background: '#ffffff',
+                  border: '1px solid #fde68a',
+                  boxShadow: '0 1px 4px rgba(245, 158, 11, 0.08)',
+                }}
               >
-                {language === 'zh' ? '\u6B22\u8FCE\u56DE\u6765\uFF0C' : 'Welcome back,'}
-              </p>
-              <p
-                className="font-[family-name:var(--font-pixel)] text-lg font-semibold"
-                style={{ color: '#1e293b' }}
+                <span className="text-sm">{'\u2B50'}</span>
+                <span className="font-[family-name:var(--font-pixel)] font-semibold text-xs" style={{ color: '#f59e0b' }}>{totalStars}</span>
+              </div>
+              <div
+                className="flex items-center gap-1.5 rounded-full text-sm"
+                style={{
+                  padding: '5px 10px',
+                  background: '#ffffff',
+                  border: '1px solid #bbf7d0',
+                  boxShadow: '0 1px 4px rgba(34, 197, 94, 0.08)',
+                }}
               >
-                {username}
-              </p>
-            </div>
-          </motion.div>
-        )}
-        {!username && <div />}
+                <span className="text-sm">{'\u2705'}</span>
+                <span className="font-[family-name:var(--font-pixel)] font-semibold text-xs" style={{ color: '#22c55e' }}>{totalCompleted}/26</span>
+              </div>
+              <div
+                className="flex items-center gap-1.5 rounded-full text-sm"
+                style={{
+                  padding: '5px 10px',
+                  background: '#ffffff',
+                  border: '1px solid #ddd6fe',
+                  boxShadow: '0 1px 4px rgba(139, 92, 246, 0.08)',
+                }}
+              >
+                <span className="text-sm">{'\uD83D\uDCDA'}</span>
+                <span className="font-[family-name:var(--font-pixel)] font-semibold text-xs" style={{ color: '#8b5cf6' }}>
+                  Ch1 {ch1.completed}/{ch1.total}
+                  {ch2.completed > 0 && <> {'\u00B7'} Ch2 {ch2.completed}/{ch2.total}</>}
+                  {ch3.completed > 0 && <> {'\u00B7'} Ch3 {ch3.completed}/{ch3.total}</>}
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </div>
 
-        <motion.button
+        {/* Language toggle (right side) — segmented pill */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          onClick={handleLanguageToggle}
-          className="rounded-full text-sm font-semibold font-[family-name:var(--font-ui)] cursor-pointer transition-all"
+          className="relative flex rounded-full"
           style={{
-            padding: '8px 16px',
+            padding: '3px',
             background: '#ffffff',
-            color: '#1e293b',
             border: '1px solid #e2e8f0',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = '#bae6fd'
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(14, 165, 233, 0.1)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = '#e2e8f0'
-            e.currentTarget.style.boxShadow = 'none'
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
           }}
         >
-          {language === 'zh' ? '\uD83C\uDDEC\uD83C\uDDE7 EN' : '\uD83C\uDDE8\uD83C\uDDF3 \u4E2D\u6587'}
-        </motion.button>
-      </div>
-
-      {/* ─── Player stats bar (if progress exists) ─── */}
-      {totalCompleted > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="relative z-10 flex items-center gap-3 flex-wrap"
-          style={{ padding: '0 24px 12px 24px' }}
-        >
-          <div
-            className="flex items-center gap-1.5 rounded-full text-sm"
+          {/* Sliding indicator */}
+          <motion.div
+            className="absolute rounded-full"
             style={{
-              padding: '6px 12px',
-              background: '#ffffff',
-              border: '1px solid #fde68a',
-              boxShadow: '0 1px 4px rgba(245, 158, 11, 0.08)',
+              top: '3px',
+              bottom: '3px',
+              width: 'calc(50% - 3px)',
+              background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+              boxShadow: '0 2px 8px rgba(14, 165, 233, 0.25)',
+            }}
+            animate={{ left: language === 'zh' ? '3px' : 'calc(50%)' }}
+            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+          />
+          <button
+            onClick={() => { setLanguage('zh'); i18n.changeLanguage('zh') }}
+            className="relative z-10 rounded-full text-xs font-semibold font-[family-name:var(--font-ui)] cursor-pointer transition-colors duration-200"
+            style={{
+              padding: '5px 12px',
+              background: 'transparent',
+              border: 'none',
+              color: language === 'zh' ? '#ffffff' : '#64748b',
             }}
           >
-            <span className="text-base">{'\u2B50'}</span>
-            <span className="font-[family-name:var(--font-pixel)] font-semibold" style={{ color: '#f59e0b' }}>{totalStars}</span>
-            <span className="text-xs" style={{ color: '#64748b' }}>{language === 'zh' ? '\u661F\u661F' : 'Stars'}</span>
-          </div>
-          <div
-            className="flex items-center gap-1.5 rounded-full text-sm"
+            {'\uD83C\uDDE8\uD83C\uDDF3'} {'\u4E2D\u6587'}
+          </button>
+          <button
+            onClick={() => { setLanguage('en'); i18n.changeLanguage('en') }}
+            className="relative z-10 rounded-full text-xs font-semibold font-[family-name:var(--font-ui)] cursor-pointer transition-colors duration-200"
             style={{
-              padding: '6px 12px',
-              background: '#ffffff',
-              border: '1px solid #bbf7d0',
-              boxShadow: '0 1px 4px rgba(34, 197, 94, 0.08)',
+              padding: '5px 12px',
+              background: 'transparent',
+              border: 'none',
+              color: language === 'en' ? '#ffffff' : '#64748b',
             }}
           >
-            <span className="text-base">{'\u2705'}</span>
-            <span className="font-[family-name:var(--font-pixel)] font-semibold" style={{ color: '#22c55e' }}>{totalCompleted}/26</span>
-            <span className="text-xs" style={{ color: '#64748b' }}>{language === 'zh' ? '\u5173\u5361' : 'Levels'}</span>
-          </div>
-          <div
-            className="flex items-center gap-1.5 rounded-full text-sm"
-            style={{
-              padding: '6px 12px',
-              background: '#ffffff',
-              border: '1px solid #ddd6fe',
-              boxShadow: '0 1px 4px rgba(139, 92, 246, 0.08)',
-            }}
-          >
-            <span className="text-base">{'\uD83D\uDCDA'}</span>
-            <span className="font-[family-name:var(--font-pixel)] font-semibold" style={{ color: '#8b5cf6' }}>
-              Ch1 {ch1.completed}/{ch1.total}
-              {ch2.completed > 0 && <> {'\u00B7'} Ch2 {ch2.completed}/{ch2.total}</>}
-              {ch3.completed > 0 && <> {'\u00B7'} Ch3 {ch3.completed}/{ch3.total}</>}
-            </span>
-          </div>
+            {'\uD83C\uDDEC\uD83C\uDDE7'} EN
+          </button>
         </motion.div>
-      )}
+      </div>
 
       {/* ─── Main content ─── */}
       <div
@@ -217,7 +226,7 @@ export function HomeScreen() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
           className="text-center w-full"
-          style={{ paddingBottom: '8px' }}
+          style={{ paddingBottom: '32px' }}
         >
           {/* Title with gradient */}
           <h1
@@ -237,106 +246,55 @@ export function HomeScreen() {
           {/* Subtitle */}
           <p
             className="font-[family-name:var(--font-ui)] text-xl md:text-2xl font-medium"
-            style={{ marginBottom: '32px', color: '#64748b' }}
+            style={{ color: '#64748b' }}
           >
             {t('app.subtitle')}
           </p>
-
-          {/* ─── Two primary CTA buttons side by side ─── */}
-          <div className="flex justify-center gap-6">
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 150 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setScreen('chapter-select')}
-              className="rounded-2xl font-[family-name:var(--font-pixel)] text-xl font-bold cursor-pointer border-0 relative overflow-hidden"
-              style={{
-                padding: '20px 48px',
-                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                boxShadow: '0 6px 0 #0369a1, 0 8px 20px rgba(14, 165, 233, 0.25)',
-                color: '#ffffff',
-              }}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-3">
-                <span className="text-2xl">{'\uD83D\uDCD6'}</span>
-                {t('home.startGame')}
-              </span>
-              <div className="absolute inset-0 opacity-30 shimmer" />
-            </motion.button>
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 150 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setScreen('challenge-select')}
-              className="rounded-2xl font-[family-name:var(--font-pixel)] text-xl font-bold cursor-pointer border-0 relative overflow-hidden"
-              style={{
-                padding: '20px 48px',
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                boxShadow: '0 6px 0 #b45309, 0 8px 20px rgba(245, 158, 11, 0.25)',
-                color: '#ffffff',
-              }}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-3">
-                <span className="text-2xl">{'\uD83C\uDFAF'}</span>
-                {t('home.challenge')}
-              </span>
-              <div className="absolute inset-0 opacity-30 shimmer" />
-            </motion.button>
-          </div>
         </motion.div>
 
-        {/* ─── Menu cards grid ─── */}
+        {/* ─── Three equal entry cards ─── */}
         <div
-          className="grid grid-cols-3 gap-4 lg:gap-5 max-w-4xl mx-auto w-full"
+          className="grid grid-cols-3 gap-5 lg:gap-6 max-w-4xl mx-auto w-full"
           style={{ paddingBottom: '24px' }}
         >
-          {MENU_CARDS.map((item, i) => (
+          {MAIN_CARDS.map((item, i) => (
             <motion.button
               key={item.key}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.08, type: 'spring', stiffness: 150 }}
-              whileHover={{
-                scale: 1.04,
-                y: -3,
-              }}
+              transition={{ delay: 0.2 + i * 0.1, type: 'spring', stiffness: 150 }}
+              whileHover={{ scale: 1.04, y: -4 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => setScreen(item.screen)}
-              className="rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all"
+              className="rounded-2xl flex flex-col items-center justify-center gap-4 cursor-pointer border-0 relative overflow-hidden"
               style={{
-                padding: '24px',
+                padding: '36px 24px',
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
-                borderTop: `4px solid ${item.borderTopColor}`,
                 borderRadius: '20px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-3px)'
-                e.currentTarget.style.boxShadow = item.hoverShadow
-                e.currentTarget.style.borderColor = item.hoverBorderColor
+                e.currentTarget.style.boxShadow = `0 8px 32px ${item.glowColor}`
+                e.currentTarget.style.borderColor = `${item.glowColor}`
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)'
                 e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'
                 e.currentTarget.style.borderColor = '#e2e8f0'
               }}
             >
               {/* Emoji with circle background */}
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center"
+                className="w-24 h-24 rounded-full flex items-center justify-center"
                 style={{ background: item.iconBg }}
               >
-                <span className="text-5xl lg:text-6xl">{item.emoji}</span>
+                <span className="text-6xl lg:text-7xl">{item.emoji}</span>
               </div>
 
               {/* Title */}
               <span
-                className="font-[family-name:var(--font-pixel)] text-xl font-bold"
+                className="font-[family-name:var(--font-pixel)] text-2xl font-bold"
                 style={{ color: item.titleColor }}
               >
                 {t(`home.${item.key}`)}
@@ -348,153 +306,6 @@ export function HomeScreen() {
           ))}
         </div>
       </div>
-
-      {/* ─── Welcome Modal ─── */}
-      <AnimatePresence>
-        {showWelcome && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center z-50"
-            style={{ background: 'rgba(0, 0, 0, 0.3)' }}
-          >
-            {/* Subtle decorative circles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full opacity-30" style={{ background: 'radial-gradient(circle, #bae6fd, transparent 70%)' }} />
-              <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, #ddd6fe, transparent 70%)' }} />
-              <div className="absolute top-1/4 right-1/4 w-40 h-40 rounded-full opacity-15" style={{ background: 'radial-gradient(circle, #fbcfe8, transparent 70%)' }} />
-            </div>
-
-            <motion.div
-              initial={{ scale: 0.7, opacity: 0, y: 30 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.7, opacity: 0, y: 30 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="relative max-w-xl w-full text-center"
-              style={{
-                margin: '0 16px',
-                padding: '3.5rem 3rem',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '28px',
-                boxShadow: '0 25px 80px rgba(0, 0, 0, 0.12), 0 4px 24px rgba(0, 0, 0, 0.06)',
-              }}
-            >
-              {/* Floating welcome emoji */}
-              <motion.div
-                initial={{ scale: 0, rotate: -20 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-                className="text-8xl animate-float"
-                style={{ marginBottom: '1.5rem' }}
-              >
-                {'\uD83D\uDC4B'}
-              </motion.div>
-
-              <motion.h2
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="font-[family-name:var(--font-pixel)] text-3xl md:text-4xl font-bold"
-                style={{
-                  marginBottom: '0.75rem',
-                  background: 'linear-gradient(135deg, #0ea5e9, #8b5cf6 50%, #ec4899)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                {t('welcome.title')}
-              </motion.h2>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="font-[family-name:var(--font-ui)] text-lg"
-                style={{ marginBottom: '2.5rem', color: '#64748b' }}
-              >
-                {t('welcome.enterUsername')}
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <input
-                  type="text"
-                  value={nameInput}
-                  onChange={e => setNameInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleStartWelcome()}
-                  placeholder="SwiftPanda"
-                  className="w-full rounded-2xl font-[family-name:var(--font-ui)] text-lg outline-none transition-all"
-                  style={{
-                    padding: '1rem 1.5rem',
-                    marginBottom: '2rem',
-                    background: '#f8fafc',
-                    border: '2px solid #e2e8f0',
-                    color: '#1e293b',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#0ea5e9'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = '#e2e8f0'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                  autoFocus
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="flex gap-4"
-              >
-                <button
-                  onClick={() => {
-                    const name = generateRandomUsername()
-                    setNameInput(name)
-                  }}
-                  className="flex-1 text-base font-[family-name:var(--font-ui)] font-semibold rounded-2xl active:scale-[0.97] transition-all cursor-pointer"
-                  style={{
-                    padding: '1rem 1.25rem',
-                    background: 'transparent',
-                    border: '2px solid #e2e8f0',
-                    color: '#0ea5e9',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = '#bae6fd'
-                    e.currentTarget.style.background = '#f0f9ff'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = '#e2e8f0'
-                    e.currentTarget.style.background = 'transparent'
-                  }}
-                >
-                  {'\uD83C\uDFB2'} {t('welcome.randomGenerate')}
-                </button>
-                <button
-                  onClick={handleStartWelcome}
-                  className="flex-1 text-base font-[family-name:var(--font-ui)] font-semibold rounded-2xl border-0 active:scale-[0.97] transition-all cursor-pointer"
-                  style={{
-                    padding: '1rem 1.25rem',
-                    background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                    color: '#ffffff',
-                    boxShadow: '0 4px 20px rgba(14, 165, 233, 0.25)',
-                  }}
-                >
-                  {'\uD83D\uDE80'} {t('welcome.start')}
-                </button>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

@@ -1,5 +1,48 @@
 import type { ParsedCommand, ParseError, ParseResult, CommandType } from './types'
 
+type KeyEntry = { type: CommandType; args: Record<string, string | number | boolean> }
+
+const KEY_MAP: Record<string, KeyEntry> = {
+  '"': { type: 'split-horizontal', args: {} },
+  '%': { type: 'split-vertical', args: {} },
+  'c': { type: 'new-window', args: {} },
+  'n': { type: 'next-window', args: {} },
+  'p': { type: 'previous-window', args: {} },
+  'x': { type: 'close-pane', args: {} },
+  'z': { type: 'zoom-pane', args: {} },
+  'd': { type: 'detach', args: {} },
+  ',': { type: 'rename-window', args: {} },
+  '{': { type: 'swap-pane', args: { direction: 'up' } },
+  '}': { type: 'swap-pane', args: { direction: 'down' } },
+  '!': { type: 'break-pane', args: {} },
+  ' ': { type: 'next-layout', args: {} },
+  'Space': { type: 'next-layout', args: {} },
+  '[': { type: 'enter-copy-mode', args: {} },
+  ']': { type: 'paste', args: {} },
+  's': { type: 'list-sessions', args: {} },
+  'ArrowUp': { type: 'select-pane', args: { direction: 'up' } },
+  'ArrowDown': { type: 'select-pane', args: { direction: 'down' } },
+  'ArrowLeft': { type: 'select-pane', args: { direction: 'left' } },
+  'ArrowRight': { type: 'select-pane', args: { direction: 'right' } },
+  '0': { type: 'select-window', args: { index: 0 } },
+  '1': { type: 'select-window', args: { index: 1 } },
+  '2': { type: 'select-window', args: { index: 2 } },
+  '3': { type: 'select-window', args: { index: 3 } },
+  '4': { type: 'select-window', args: { index: 4 } },
+  '5': { type: 'select-window', args: { index: 5 } },
+  '6': { type: 'select-window', args: { index: 6 } },
+  '7': { type: 'select-window', args: { index: 7 } },
+  '8': { type: 'select-window', args: { index: 8 } },
+  '9': { type: 'select-window', args: { index: 9 } },
+}
+
+const CTRL_ARROW_MAP: Record<string, KeyEntry> = {
+  'C-ArrowUp': { type: 'resize-pane', args: { direction: 'up', amount: 5 } },
+  'C-ArrowDown': { type: 'resize-pane', args: { direction: 'down', amount: 5 } },
+  'C-ArrowLeft': { type: 'resize-pane', args: { direction: 'left', amount: 5 } },
+  'C-ArrowRight': { type: 'resize-pane', args: { direction: 'right', amount: 5 } },
+}
+
 export class CommandParser {
   parseInput(input: string): ParseResult {
     const trimmed = input.trim()
@@ -13,49 +56,12 @@ export class CommandParser {
   }
 
   parseKeySequence(_prefix: string, key: string): ParseResult {
-    const keyMap: Record<string, { type: CommandType; args: Record<string, string | number | boolean> }> = {
-      '"': { type: 'split-horizontal', args: {} },
-      '%': { type: 'split-vertical', args: {} },
-      'c': { type: 'new-window', args: {} },
-      'n': { type: 'next-window', args: {} },
-      'p': { type: 'previous-window', args: {} },
-      'x': { type: 'close-pane', args: {} },
-      'z': { type: 'zoom-pane', args: {} },
-      'd': { type: 'detach', args: {} },
-      ',': { type: 'rename-window', args: {} },
-      '{': { type: 'swap-pane', args: { direction: 'up' } },
-      '}': { type: 'swap-pane', args: { direction: 'down' } },
-      '!': { type: 'break-pane', args: {} },
-      ' ': { type: 'next-layout', args: {} },
-      'Space': { type: 'next-layout', args: {} },
-      '[': { type: 'enter-copy-mode', args: {} },
-      ']': { type: 'paste', args: {} },
-      's': { type: 'list-sessions', args: {} },
-      'ArrowUp': { type: 'select-pane', args: { direction: 'up' } },
-      'ArrowDown': { type: 'select-pane', args: { direction: 'down' } },
-      'ArrowLeft': { type: 'select-pane', args: { direction: 'left' } },
-      'ArrowRight': { type: 'select-pane', args: { direction: 'right' } },
-    }
-
-    // Number keys for window selection
-    for (let i = 0; i <= 9; i++) {
-      keyMap[String(i)] = { type: 'select-window', args: { index: i } }
-    }
-
-    // Ctrl+Arrow for resize
-    const ctrlArrowMap: Record<string, { type: CommandType; args: Record<string, string | number | boolean> }> = {
-      'C-ArrowUp': { type: 'resize-pane', args: { direction: 'up', amount: 5 } },
-      'C-ArrowDown': { type: 'resize-pane', args: { direction: 'down', amount: 5 } },
-      'C-ArrowLeft': { type: 'resize-pane', args: { direction: 'left', amount: 5 } },
-      'C-ArrowRight': { type: 'resize-pane', args: { direction: 'right', amount: 5 } },
-    }
-
-    const ctrlEntry = ctrlArrowMap[key]
+    const ctrlEntry = CTRL_ARROW_MAP[key]
     if (ctrlEntry) {
       return this.makeCommand(ctrlEntry.type, ctrlEntry.args, `prefix + ${key}`)
     }
 
-    const entry = keyMap[key]
+    const entry = KEY_MAP[key]
     if (entry) {
       return this.makeCommand(entry.type, entry.args, `prefix + ${key}`)
     }

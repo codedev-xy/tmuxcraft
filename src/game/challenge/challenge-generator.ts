@@ -1,6 +1,8 @@
 import type { ChallengeGoal, ChallengeDifficulty } from '../level-types'
 import type { TmuxState } from '@/core/types'
 
+type Lang = 'zh' | 'en'
+
 const WINDOW_NAMES = ['code', 'server', 'logs', 'tests', 'docs', 'deploy', 'monitor', 'db', 'api', 'web']
 
 function pick<T>(arr: T[]): T {
@@ -21,15 +23,21 @@ function countPanes(node: import('@/core/types').LayoutNode): number {
   return 0
 }
 
-export function generateChallenge(difficulty: ChallengeDifficulty): ChallengeGoal {
+const layoutDescMap: Record<string, Record<Lang, string>> = {
+  single: { zh: '单面板', en: 'single pane' },
+  horizontal: { zh: '上下分割', en: 'top/bottom split' },
+  vertical: { zh: '左右分割', en: 'left/right split' },
+}
+
+export function generateChallenge(difficulty: ChallengeDifficulty, lang: Lang = 'zh'): ChallengeGoal {
   switch (difficulty) {
-    case 'beginner': return generateBeginner()
-    case 'intermediate': return generateIntermediate()
-    case 'advanced': return generateAdvanced()
+    case 'beginner': return generateBeginner(lang)
+    case 'intermediate': return generateIntermediate(lang)
+    case 'advanced': return generateAdvanced(lang)
   }
 }
 
-function generateBeginner(): ChallengeGoal {
+function generateBeginner(lang: Lang): ChallengeGoal {
   const numWindows = randInt(2, 4)
   const names = []
   const layouts: string[] = []
@@ -40,11 +48,10 @@ function generateBeginner(): ChallengeGoal {
     layouts.push(layout)
   }
 
-  const description = `Create ${numWindows} windows: ${names.map((n, i) => {
-    const l = layouts[i]
-    const layoutDesc = l === 'single' ? 'single pane' : l === 'horizontal' ? 'top/bottom split' : 'left/right split'
-    return `"${n}" (${layoutDesc})`
-  }).join(', ')}`
+  const windowDescs = names.map((n, i) => `"${n}" (${layoutDescMap[layouts[i]][lang]})`).join(lang === 'zh' ? '、' : ', ')
+  const description = lang === 'zh'
+    ? `创建 ${numWindows} 个窗口：${windowDescs}`
+    : `Create ${numWindows} windows: ${windowDescs}`
 
   const optimalSteps = names.reduce((acc, _, i) => {
     let steps = 1 // create window
@@ -73,7 +80,7 @@ function generateBeginner(): ChallengeGoal {
   }
 }
 
-function generateIntermediate(): ChallengeGoal {
+function generateIntermediate(lang: Lang): ChallengeGoal {
   const tasks = pick([
     'resize',
     'multi-window-pane',
@@ -83,7 +90,9 @@ function generateIntermediate(): ChallengeGoal {
   switch (tasks) {
     case 'resize': {
       const numPanes = randInt(3, 5)
-      const description = `Create ${numPanes} panes in the current window and arrange them using even-horizontal layout`
+      const description = lang === 'zh'
+        ? `在当前窗口创建 ${numPanes} 个面板，并使用 even-horizontal 布局排列`
+        : `Create ${numPanes} panes in the current window and arrange them using even-horizontal layout`
       return {
         description,
         optimalSteps: numPanes,
@@ -95,7 +104,9 @@ function generateIntermediate(): ChallengeGoal {
       }
     }
     case 'multi-window-pane': {
-      const description = 'Create 2 windows: "dev" with 4 panes (2x2 grid) and "prod" with 2 horizontal panes'
+      const description = lang === 'zh'
+        ? '创建 2 个窗口："dev" 包含 4 个面板（2x2 网格），"prod" 包含 2 个水平面板'
+        : 'Create 2 windows: "dev" with 4 panes (2x2 grid) and "prod" with 2 horizontal panes'
       return {
         description,
         optimalSteps: 10,
@@ -111,7 +122,9 @@ function generateIntermediate(): ChallengeGoal {
     }
     default: {
       const numPanes = randInt(3, 4)
-      const description = `Create ${numPanes} panes and apply tiled layout`
+      const description = lang === 'zh'
+        ? `创建 ${numPanes} 个面板并应用 tiled 布局`
+        : `Create ${numPanes} panes and apply tiled layout`
       return {
         description,
         optimalSteps: numPanes + 1,
@@ -125,8 +138,10 @@ function generateIntermediate(): ChallengeGoal {
   }
 }
 
-function generateAdvanced(): ChallengeGoal {
-  const description = 'Create 2 sessions: "work" with 3 windows (code/test/deploy) and "monitor" with 2 windows (logs/metrics). Each window should have at least 2 panes.'
+function generateAdvanced(lang: Lang): ChallengeGoal {
+  const description = lang === 'zh'
+    ? '创建 2 个会话："work" 包含 3 个窗口（code/test/deploy），"monitor" 包含 2 个窗口（logs/metrics）。每个窗口至少 2 个面板。'
+    : 'Create 2 sessions: "work" with 3 windows (code/test/deploy) and "monitor" with 2 windows (logs/metrics). Each window should have at least 2 panes.'
   return {
     description,
     optimalSteps: 15,

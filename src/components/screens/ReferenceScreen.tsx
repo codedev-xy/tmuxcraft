@@ -148,38 +148,48 @@ export function ReferenceScreen() {
   const categoriesWithResults = CATEGORIES.filter(cat => getFilteredByCategory(cat).length > 0)
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#f0f4ff' }}>
+    <div className="flex flex-col h-screen relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f4ff 50%, #f0f4ff 100%)' }}>
+      {/* ─── Decorative background blob (blue tone for reference) ─── */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          top: '-5%',
+          left: '-4%',
+          width: '28%',
+          height: '28%',
+          background: 'radial-gradient(circle, rgba(14,165,233,0.1) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          animation: 'float-slow 9s ease-in-out infinite',
+        }}
+      />
+      <div className="absolute inset-0 bg-dots opacity-[0.03] pointer-events-none" />
+
       {/* Header */}
       <div
-        className="flex items-center gap-4 shrink-0"
+        className="flex items-center gap-4 shrink-0 relative z-10 glass"
         style={{
-          padding: '1rem 1.5rem',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          padding: '16px 24px',
+          borderBottom: '1px solid rgba(226,232,240,0.8)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}
       >
         <button
           onClick={() => setScreen('home')}
-          className="font-[family-name:var(--font-ui)] font-semibold cursor-pointer"
+          className="font-[family-name:var(--font-ui)] font-semibold text-sm cursor-pointer transition-all"
           style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.875rem',
-            background: '#f1f5f9',
+            padding: '8px 16px',
+            background: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: '10px',
-            color: '#1e293b',
-            transition: 'all 0.2s ease',
+            color: '#64748b',
           }}
           onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.background = '#e2e8f0'
-            el.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)'
           }}
           onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.background = '#f1f5f9'
-            el.style.borderColor = '#e2e8f0'
+            e.currentTarget.style.borderColor = '#e2e8f0'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         >
           &larr; {t('common.back')}
@@ -216,7 +226,7 @@ export function ReferenceScreen() {
       </div>
 
       {/* Commands by category */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '0.5rem 1.5rem 1.5rem' }}>
+      <div className="flex-1 overflow-y-auto relative z-10" style={{ padding: '0.5rem 1.5rem 1.5rem' }}>
         <div className="max-w-4xl w-full" style={{ margin: '0 auto' }}>
           {categoriesWithResults.map(cat => {
             const commands = getFilteredByCategory(cat)

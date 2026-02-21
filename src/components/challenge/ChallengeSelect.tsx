@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { useGameStore } from '@/store/game-store'
-import { useProgressStore } from '@/store/progress-store'
-import { useUserStore } from '@/store/user-store'
 import type { ChallengeDifficulty } from '@/game/level-types'
 
 const DIFFICULTIES: {
@@ -42,46 +40,76 @@ const DIFFICULTIES: {
 export function ChallengeSelect() {
   const { t } = useTranslation()
   const setScreen = useGameStore(s => s.setScreen)
-  const isChallengeUnlocked = useProgressStore(s => s.isChallengeUnlocked)
-  const language = useUserStore(s => s.language)
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#f0f4ff' }}>
+    <div className="flex flex-col h-screen relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #fff5eb 50%, #f0f4ff 100%)' }}>
+      {/* ─── Decorative background blobs ─── */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          top: '-8%',
+          right: '-5%',
+          width: '32%',
+          height: '32%',
+          background: 'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          animation: 'float-slow 8s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          bottom: '-6%',
+          left: '-3%',
+          width: '25%',
+          height: '25%',
+          background: 'radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%)',
+          filter: 'blur(50px)',
+          animation: 'float-slow 11s ease-in-out infinite reverse',
+        }}
+      />
+      <div className="absolute inset-0 bg-dots opacity-[0.03] pointer-events-none" />
+
       {/* Header */}
       <div
-        className="flex items-center"
+        className="flex items-center gap-4 relative z-10 glass"
         style={{
           padding: '16px 24px',
-          gap: '16px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid rgba(226,232,240,0.8)',
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}
       >
         <button
           onClick={() => setScreen('home')}
-          className="font-[family-name:var(--font-ui)] font-semibold text-sm"
+          className="font-[family-name:var(--font-ui)] font-semibold text-sm cursor-pointer transition-all"
           style={{
             padding: '8px 16px',
-            borderRadius: '12px',
-            background: '#f0f4ff',
+            borderRadius: '10px',
+            background: '#ffffff',
             color: '#64748b',
             border: '1px solid #e2e8f0',
-            cursor: 'pointer',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = '#e2e8f0'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         >
           &larr; {t('common.back')}
         </button>
         <h1
           className="font-[family-name:var(--font-pixel)] text-xl font-bold"
-          style={{ color: '#1e293b' }}
+          style={{ color: '#f59e0b' }}
         >
-          {t('challenge.title')}
+          {'\uD83C\uDFAF'} {t('challenge.title')}
         </h1>
       </div>
 
       <div
-        className="flex-1 flex items-center justify-center"
+        className="flex-1 flex items-center justify-center relative z-10"
         style={{ padding: '32px' }}
       >
         <div
@@ -89,26 +117,29 @@ export function ChallengeSelect() {
           style={{ gap: '24px' }}
         >
           {DIFFICULTIES.map((diff, i) => {
-            const unlocked = isChallengeUnlocked(diff.key)
             return (
               <motion.button
                 key={diff.key}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.12, type: 'spring', stiffness: 200 }}
-                whileHover={unlocked ? { y: -8, scale: 1.03 } : {}}
-                disabled={!unlocked}
-                onClick={() => { if (unlocked) setScreen('challenge') }}
-                className={`relative flex-1 flex flex-col items-center text-center overflow-hidden transition-all min-h-[280px] ${
-                  unlocked ? 'cursor-pointer' : 'cursor-not-allowed'
-                }`}
+                whileHover={{ y: -8, scale: 1.03 }}
+                onClick={() => setScreen('challenge')}
+                className="relative flex-1 flex flex-col items-center text-center overflow-hidden transition-all min-h-[280px] cursor-pointer"
                 style={{
                   borderRadius: '20px',
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
-                  boxShadow: unlocked
-                    ? '0 2px 12px rgba(0,0,0,0.06)'
-                    : '0 1px 4px rgba(0,0,0,0.04)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow = `0 8px 32px ${diff.color}25`
+                  e.currentTarget.style.borderColor = `${diff.color}40`
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'
+                  e.currentTarget.style.borderColor = '#e2e8f0'
                 }}
               >
                 {/* Colored top accent strip */}
@@ -118,7 +149,6 @@ export function ChallengeSelect() {
                     height: '6px',
                     background: diff.gradient,
                     borderRadius: '19px 19px 0 0',
-                    opacity: unlocked ? 1 : 0.3,
                   }}
                 />
 
@@ -166,25 +196,6 @@ export function ChallengeSelect() {
                     </span>
                   </div>
                 </div>
-
-                {/* Lock overlay */}
-                {!unlocked && (
-                  <div
-                    className="absolute inset-0 flex flex-col items-center justify-center"
-                    style={{
-                      borderRadius: '20px',
-                      background: 'rgba(255, 255, 255, 0.7)',
-                    }}
-                  >
-                    <span className="text-6xl" style={{ marginBottom: '12px', color: '#94a3b8' }}>{'\uD83D\uDD12'}</span>
-                    <p
-                      className="font-[family-name:var(--font-ui)] text-base font-semibold"
-                      style={{ color: '#94a3b8' }}
-                    >
-                      {language === 'zh' ? `\u5B8C\u6210\u7B2C ${diff.chapter} \u7AE0\u89E3\u9501` : `Complete Chapter ${diff.chapter}`}
-                    </p>
-                  </div>
-                )}
               </motion.button>
             )
           })}

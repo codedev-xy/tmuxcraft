@@ -63,30 +63,6 @@ export interface LevelProgress {
   completedAt?: string              // ISO timestamp
 }
 
-export interface GameProgress {
-  levelProgress: Record<string, LevelProgress>
-  chaptersCompleted: number[]
-  totalLevelsCompleted: number
-  totalStarsEarned: number
-}
-
-// ===== Achievements =====
-
-export interface Achievement {
-  id: string
-  titleKey: string
-  descriptionKey: string
-  icon: string
-  condition: (progress: GameProgress, context?: AchievementContext) => boolean
-}
-
-export interface AchievementContext {
-  currentPaneCount?: number
-  currentCombo?: number
-  consecutiveNoHints?: number
-  challengeTime?: number
-}
-
 // ===== Challenge Mode =====
 
 export type ChallengeDifficulty = 'beginner' | 'intermediate' | 'advanced'
@@ -108,7 +84,6 @@ export interface ChallengeTemplate {
 }
 
 export interface ChallengeRecord {
-  username: string
   difficulty: ChallengeDifficulty
   completedAt: string               // ISO timestamp
   timeSeconds: number
@@ -134,10 +109,7 @@ export interface ValidationResult {
 // ===== User Settings =====
 
 export interface UserSettings {
-  username: string
   language: 'zh' | 'en'
-  soundEnabled: boolean
-  isFirstVisit: boolean
 }
 
 // ===== Layout Comparison =====

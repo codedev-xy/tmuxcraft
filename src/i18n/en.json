@@ -7,8 +7,7 @@
     "startGame": "Learning Mode",
     "challenge": "Challenge Mode",
     "reference": "Command Reference",
-    "settings": "Settings",
-    "achievements": "Achievements"
+    "settings": "Settings"
   },
   "welcome": {
     "title": "Welcome to TmuxCraft!",
@@ -220,25 +219,6 @@
     "date": "Date",
     "time": "Time",
     "noRecords": "No records yet. Be the first challenger!"
-  },
-  "achievements": {
-    "title": "Achievements",
-    "locked": "Locked",
-    "beginner": { "title": "Beginner", "description": "Complete your first level" },
-    "paneMaster": { "title": "Pane Master", "description": "Create 6+ panes at once" },
-    "speedStar": { "title": "Speed Star", "description": "Complete any level within optimal steps" },
-    "perfectionist": { "title": "Perfectionist", "description": "Get 3 stars on any level" },
-    "chapter1Complete": { "title": "Basics Graduate", "description": "Complete all Chapter 1 levels" },
-    "chapter2Complete": { "title": "Advanced Graduate", "description": "Complete all Chapter 2 levels" },
-    "chapter3Complete": { "title": "Expert Graduate", "description": "Complete all Chapter 3 levels" },
-    "allComplete": { "title": "Grand Master", "description": "Complete all levels" },
-    "challenger": { "title": "Challenger", "description": "Complete your first challenge" },
-    "lightning": { "title": "Lightning", "description": "Complete a challenge within 30 seconds" },
-    "noHints10": { "title": "Independent Thinker", "description": "Complete 10 levels in a row without hints" },
-    "combo5": { "title": "Combo Master", "description": "Achieve a 5x combo" },
-    "combo10": { "title": "Combo Legend", "description": "Achieve a 10x combo" },
-    "allStars": { "title": "Stargazer", "description": "Get 3 stars on all levels" },
-    "dedication": { "title": "Dedicated", "description": "Complete 50 levels total" }
   },
   "reference": {
     "title": "Command Reference",

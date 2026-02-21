@@ -130,3 +130,29 @@ body {
   background-size: 200% 100%;
   animation: shimmer 2s ease-in-out infinite;
 }
+
+/* ─── Dot pattern texture ─── */
+.bg-dots {
+  background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Glassmorphism ─── */
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* ─── Decorative keyframes ─── */
+
+@keyframes gradient-shift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(10px, -10px) scale(1.05); }
+  66% { transform: translate(-8px, 8px) scale(0.97); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
