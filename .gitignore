@@ -23,8 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# Screenshots
-*.png
+# Screenshots (ignore root-level PNGs, keep screenshots/ dir)
+/*.png
+!screenshots/
 
 # Temp test scripts
 test-keyboard*.mjs
