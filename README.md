@@ -8,18 +8,17 @@ TmuxCraft is a browser-based interactive game for learning tmux. Complete levels
 
 ## Demo
 
-<table>
-  <tr>
-    <td><img src="screenshots/01-home.png" alt="Home" width="280"/></td>
-    <td><img src="screenshots/03-level-select.png" alt="Level Select" width="280"/></td>
-    <td><img src="screenshots/04-game.png" alt="Gameplay" width="280"/></td>
-  </tr>
-  <tr>
-    <td align="center">Home</td>
-    <td align="center">Level Select</td>
-    <td align="center">Gameplay</td>
-  </tr>
-</table>
+### Home
+
+![Home](screenshots/01-home.png)
+
+### Level Select
+
+![Level Select](screenshots/03-level-select.png)
+
+### Gameplay
+
+![Gameplay](screenshots/04-game.png)
 
 ## Features
 
