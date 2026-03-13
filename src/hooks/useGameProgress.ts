@@ -21,5 +21,5 @@ export function useGameProgress() {
     return store.getChapterProgress(chapter)
   }, [store])
 
-  return { completeLevel, isLevelUnlocked, isChapterComplete, getChapterProgress, ...store }
+  return { ...store, completeLevel, isLevelUnlocked, isChapterComplete, getChapterProgress }
 }

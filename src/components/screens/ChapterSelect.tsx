@@ -33,7 +33,6 @@ const CHAPTERS = [
 export function ChapterSelect() {
   const { t } = useTranslation()
   const { setScreen, setChapter } = useGameStore()
-  const chaptersCompleted = useProgressStore(s => s.chaptersCompleted)
   const getChapterProgress = useProgressStore(s => s.getChapterProgress)
   const levelProgress = useProgressStore(s => s.levelProgress)
 

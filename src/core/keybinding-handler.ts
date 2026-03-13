@@ -1,4 +1,4 @@
-import type { KeyAction, KeyBindingMap, PrefixState, CommandType } from './types'
+import type { KeyAction, KeyBindingMap, PrefixState } from './types'
 
 const DEFAULT_BINDINGS: KeyBindingMap = {
   '"': { command: 'split-horizontal', display: 'Split Horizontal' },

@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PaneRenderer } from './PaneRenderer'
 import { TmuxStatusBar } from './TmuxStatusBar'
+import { ObjectivesPanel } from './ObjectivesPanel'
+import { CompletionModal } from './CompletionModal'
+import { renderHintText } from './hint-utils'
 import { useTmuxEngine } from '@/hooks/useTmuxEngine'
 import { useKeyCapture } from '@/hooks/useKeyCapture'
 import { CommandParser } from '@/core/command-parser'
@@ -20,65 +23,6 @@ import { isParseError } from '@/core/types'
 const allLevels = [...chapter1Levels, ...chapter2Levels, ...chapter3Levels]
 
 const parser = new CommandParser()
-
-/** Keyboard shortcut style for <kbd> elements in hints */
-const kbdStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: '0.85em',
-  fontWeight: 600,
-  padding: '2px 8px',
-  borderRadius: '5px',
-  background: '#eef6ff',
-  border: '1px solid #bae6fd',
-  boxShadow: '0 1px 2px rgba(14,165,233,0.12)',
-  color: '#0369a1',
-  whiteSpace: 'nowrap',
-  display: 'inline-block',
-  lineHeight: 1.4,
-}
-
-/**
- * Pre-compiled regex for hint text parsing.
- * Matches keyboard shortcuts and commands to wrap in <kbd> elements.
- */
-const HINT_PATTERN = new RegExp(
-  [
-    /Ctrl\+b\s+Ctrl\+(?:方向键|[a-zA-Z0-9→←↑↓]+)/.source,                  // Ctrl+b Ctrl+→ / Ctrl+b Ctrl+方向键
-    /Ctrl\+b\s+(?:Space|方向键|Arrow|数字)/.source,                       // Ctrl+b Space
-    /Ctrl\+b\s+\S(?:\/\S)?/.source,                                     // Ctrl+b , | Ctrl+b " | Ctrl+b n/p
-    /:[a-z][-a-z]*(?:\s+[-a-zA-Z0-9<>~%\/.':_]+)*/.source,              // :split-window -h
-    /tmux\s+(?:new(?:\s+-s\s+\S+)?|attach(?:\s+-t\s+\S+)?|ls)/.source,  // tmux new -s name
-    /\bexit\b/.source,                                                    // exit
-  ].join('|'),
-  'g',
-)
-
-/**
- * Parse hint text and wrap keyboard shortcuts / commands in styled <kbd> elements.
- */
-function renderHintText(text: string): React.ReactNode {
-  const pattern = HINT_PATTERN
-  pattern.lastIndex = 0 // Reset stateful regex before use
-
-  const parts: React.ReactNode[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  let keyIdx = 0
-
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index))
-    }
-    parts.push(<kbd key={keyIdx++} style={kbdStyle}>{match[0]}</kbd>)
-    lastIndex = pattern.lastIndex
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
-  }
-
-  return parts.length > 0 ? parts : text
-}
 
 /** Color for combo counter based on streak length */
 function comboColor(count: number): string {
@@ -109,8 +53,6 @@ export function GameScreen() {
   const completeLevel = useProgressStore(s => s.completeLevel)
 
   const [input, setInput] = useState('')
-  const [commandHistory, setCommandHistory] = useState<string[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
   const [output, setOutput] = useState<string[]>([])
   const [currentHintLevel, setCurrentHintLevel] = useState(0)
   const [showHint, setShowHint] = useState(false)
@@ -121,10 +63,11 @@ export function GameScreen() {
 
   const inputRef = useRef<HTMLInputElement>(null)
   const outputRef = useRef<HTMLDivElement>(null)
+  const commandHistoryRef = useRef<string[]>([])
+  const historyIndexRef = useRef(-1)
 
   const { state, execute, reset } = useTmuxEngine(currentLevel?.initialState)
 
-  // Memoize validation so it's computed once per state change, not 3x per render
   const validation = useMemo(
     () => currentLevel ? validateLevel(state, currentLevel) : { isComplete: false, progress: 0, completedObjectives: [] as string[], remainingObjectives: [] as string[] },
     [state, currentLevel]
@@ -133,8 +76,8 @@ export function GameScreen() {
   // Reset local state when level changes
   useEffect(() => {
     setInput('')
-    setCommandHistory([])
-    setHistoryIndex(-1)
+    commandHistoryRef.current = []
+    historyIndexRef.current = -1
     setOutput([])
     setCurrentHintLevel(0)
     setShowHint(false)
@@ -173,7 +116,7 @@ export function GameScreen() {
     !isLevelComplete
   )
 
-  // Validate after each command (skip when no commands executed to avoid race conditions on level transitions)
+  // Validate after each command
   useEffect(() => {
     if (!currentLevel || isLevelComplete || commandCount === 0) return
     if (validation.isComplete) {
@@ -198,15 +141,14 @@ export function GameScreen() {
   const handleSubmit = useCallback(() => {
     if (!input.trim()) return
     const trimmed = input.trim()
-    setCommandHistory(prev => [...prev, trimmed])
-    setHistoryIndex(-1)
+    commandHistoryRef.current = [...commandHistoryRef.current, trimmed]
+    historyIndexRef.current = -1
 
     const result = parser.parseInput(trimmed)
     if (isParseError(result)) {
       setError(result.message)
       setOutput(prev => [...prev, `$ ${trimmed}`, `Error: ${result.message}`].slice(-50))
       resetCombo()
-      // Shake effect on error
       setTerminalShake(true)
       setTimeout(() => setTerminalShake(false), 400)
     } else {
@@ -222,35 +164,27 @@ export function GameScreen() {
       handleSubmit()
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setCommandHistory(prev => {
-        if (prev.length > 0) {
-          setHistoryIndex(idx => {
-            const newIndex = idx < 0 ? prev.length - 1 : Math.max(0, idx - 1)
-            setInput(prev[newIndex])
-            return newIndex
-          })
-        }
-        return prev
-      })
+      const history = commandHistoryRef.current
+      if (history.length === 0) return
+      const newIndex = historyIndexRef.current < 0
+        ? history.length - 1
+        : Math.max(0, historyIndexRef.current - 1)
+      historyIndexRef.current = newIndex
+      setInput(history[newIndex])
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setHistoryIndex(idx => {
-        if (idx >= 0) {
-          const newIndex = idx + 1
-          setCommandHistory(prev => {
-            if (newIndex >= prev.length) {
-              setInput('')
-            } else {
-              setInput(prev[newIndex])
-            }
-            return prev
-          })
-          return newIndex >= commandHistory.length ? -1 : newIndex
-        }
-        return idx
-      })
+      if (historyIndexRef.current < 0) return
+      const history = commandHistoryRef.current
+      const newIndex = historyIndexRef.current + 1
+      if (newIndex >= history.length) {
+        historyIndexRef.current = -1
+        setInput('')
+      } else {
+        historyIndexRef.current = newIndex
+        setInput(history[newIndex])
+      }
     }
-  }, [handleSubmit, commandHistory.length])
+  }, [handleSubmit])
 
   const handleHint = () => {
     if (!currentLevel || currentHintLevel >= 3) return
@@ -271,88 +205,88 @@ export function GameScreen() {
     setPrevCompleted([])
   }
 
+  const handleNextLevel = useCallback(() => {
+    if (!currentLevel) return
+    const currentIndex = allLevels.findIndex(l => l.id === currentLevel.id)
+    const next = currentIndex >= 0 ? allLevels[currentIndex + 1] : null
+    if (next) {
+      startLevel(next)
+    } else {
+      setScreen('level-select')
+    }
+  }, [currentLevel, startLevel, setScreen])
+
   if (!currentLevel) return null
 
   const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
   const activeWindow = activeSession?.windows[activeSession.activeWindowIndex]
-  const completedCount = commandCount > 0 ? validation.completedObjectives.length : 0
-  const totalObjectives = currentLevel.objectives.length
-  const progressRatio = totalObjectives > 0 ? completedCount / totalObjectives : 0
   const efficiency = commandCount > 0 ? Math.round((currentLevel.optimalSteps / commandCount) * 100) : 100
   const quickRef = chapterQuickRef[currentLevel.chapter] || chapterQuickRef[1]
+  const hasNextLevel = allLevels.findIndex(l => l.id === currentLevel.id) < allLevels.length - 1
 
   return (
     <div className="flex flex-col h-screen" style={{ background: '#f0f4ff' }}>
       {/* Top Bar */}
       <div
-        className="flex items-center justify-between"
+        className="flex items-center justify-between shrink-0"
         style={{
-          padding: '12px 24px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+          padding: '10px 20px',
+          background: 'linear-gradient(135deg, #1e293b, #334155)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         }}
       >
-        <div className="flex items-center" style={{ gap: '16px' }}>
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setScreen('level-select')}
-            className="font-[family-name:var(--font-ui)] text-sm"
-            style={{
-              padding: '6px 12px',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              color: '#64748b',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className="font-[family-name:var(--font-ui)] text-xs w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/20"
+            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#94a3b8' }}
           >
-            &lt;
+            ←
           </button>
           <span
-            className="font-[family-name:var(--font-pixel)] text-base font-semibold"
-            style={{
-              padding: '4px 14px',
-              borderRadius: '9999px',
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              color: '#0ea5e9',
-            }}
+            className="font-[family-name:var(--font-pixel)] text-xs font-bold px-3 py-1 rounded-full"
+            style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff' }}
           >
             Lv {currentLevel.chapter}-{currentLevel.level}
           </span>
-          <span className="font-[family-name:var(--font-pixel)] text-lg font-bold" style={{ color: '#1e293b' }}>{t(currentLevel.titleKey)}</span>
+          <span className="font-[family-name:var(--font-pixel)] text-sm font-bold text-white/90">{t(currentLevel.titleKey)}</span>
         </div>
-        <div className="flex items-center" style={{ gap: '16px' }}>
+        <div className="flex items-center gap-4">
           {/* Mini objective dots */}
-          <div className="flex items-center" style={{ gap: '8px' }}>
+          <div className="flex items-center gap-1.5">
             {currentLevel.objectives.map((obj) => {
               const done = commandCount > 0 && validation.completedObjectives.includes(obj.id)
               return (
                 <motion.div
                   key={obj.id}
-                  animate={done ? { scale: [1, 1.3, 1] } : {}}
+                  animate={done ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                  className="rounded-full transition-all duration-300"
                   style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    transition: 'all 0.3s',
-                    background: done ? '#22c55e' : '#e2e8f0',
-                    boxShadow: done ? '0 0 6px rgba(34, 197, 94, 0.4)' : 'none',
+                    width: '10px',
+                    height: '10px',
+                    background: done ? '#4ade80' : 'rgba(255,255,255,0.2)',
+                    boxShadow: done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
                   }}
                 />
               )
             })}
           </div>
-          <div style={{ width: '1px', height: '20px', background: '#e2e8f0' }} />
+          <div className="w-px h-4" style={{ background: 'rgba(255,255,255,0.15)' }} />
           {/* Stars */}
-          <div className="flex items-center" style={{ gap: '4px' }}>
+          <div className="flex items-center gap-0.5">
             {[0, 1, 2].map(i => {
               const stars = isLevelComplete ? calculateStars(commandCount, currentLevel.optimalSteps, hintsUsed) : null
               const earned = stars && (i === 0 ? stars.completed : i === 1 ? stars.efficient : stars.noHints)
               return (
-                <span key={i} style={{ fontSize: '20px', color: earned ? '#f59e0b' : '#cbd5e1' }}>
-                  {earned ? '\u2B50' : '\u2606'}
+                <span
+                  key={i}
+                  className="text-base"
+                  style={{
+                    color: earned ? '#fbbf24' : 'rgba(255,255,255,0.25)',
+                    filter: earned ? 'drop-shadow(0 0 4px rgba(251,191,36,0.5))' : 'none',
+                  }}
+                >
+                  {earned ? '\u2605' : '\u2606'}
                 </span>
               )
             })}
@@ -362,18 +296,35 @@ export function GameScreen() {
 
       {/* Main Area */}
       <div className="flex flex-1 overflow-hidden" style={{ padding: '12px', gap: '12px' }}>
-        {/* Left - Terminal (stays dark) */}
+        {/* Left - Terminal */}
         <motion.div
-          className="flex flex-col w-[60%] overflow-hidden"
+          className="flex flex-col w-[60%] overflow-hidden rounded-xl"
           style={{
             background: '#1e293b',
-            borderRadius: '12px',
-            border: '1px solid #334155',
-            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #475569',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
           }}
           animate={terminalShake ? { x: [0, -4, 4, -3, 3, -1, 1, 0] } : { x: 0 }}
           transition={{ duration: 0.4 }}
         >
+          {/* Terminal Title Bar */}
+          <div
+            className="flex items-center shrink-0 px-3 py-2"
+            style={{
+              background: 'linear-gradient(180deg, #334155, #1e293b)',
+              borderBottom: '1px solid #475569',
+            }}
+          >
+            <div className="flex gap-1.5 mr-3">
+              <div className="w-3 h-3 rounded-full" style={{ background: '#ef4444' }} />
+              <div className="w-3 h-3 rounded-full" style={{ background: '#f59e0b' }} />
+              <div className="w-3 h-3 rounded-full" style={{ background: '#22c55e' }} />
+            </div>
+            <span className="font-[family-name:var(--font-mono)] text-[11px] text-slate-500">
+              tmux — {activeSession ? `${activeSession.name}` : 'bash'}
+            </span>
+          </div>
+
           {/* Pane Visualization */}
           <div className="flex-1 relative" style={{ padding: '8px' }}>
             {state.isDetached ? (
@@ -394,25 +345,43 @@ export function GameScreen() {
           {/* Command Output */}
           <div
             ref={outputRef}
-            className="overflow-y-auto font-[family-name:var(--font-mono)] text-xs"
+            className="overflow-y-auto font-[family-name:var(--font-mono)] text-xs leading-relaxed"
             style={{
               height: '128px',
-              padding: '8px',
+              padding: '8px 10px',
               background: '#0f172a',
               borderTop: '1px solid #334155',
             }}
           >
-            {output.slice(-20).map((line, i) => (
-              <div key={i} style={{ color: line.startsWith('Error') ? '#ef4444' : '#94a3b8' }}>{line}</div>
-            ))}
+            {output.length === 0 ? (
+              <div
+                className="h-full flex items-center justify-center"
+                style={{ color: '#334155', fontSize: '0.75rem', letterSpacing: '0.05em' }}
+              >
+                {t('game.outputPlaceholder')}
+              </div>
+            ) : output.slice(-20).map((line, i) => {
+              if (line.startsWith('Error')) {
+                return <div key={i} style={{ color: '#ef4444' }}>{line}</div>
+              }
+              if (line.startsWith('$ ')) {
+                return (
+                  <div key={i}>
+                    <span style={{ color: '#22c55e', fontWeight: 600 }}>$ </span>
+                    <span style={{ color: '#e2e8f0' }}>{line.slice(2)}</span>
+                  </div>
+                )
+              }
+              return <div key={i} style={{ color: '#64748b' }}>{line}</div>
+            })}
           </div>
 
           {/* Terminal Input */}
           <div
             className="flex items-center font-[family-name:var(--font-mono)] text-sm"
             style={{
-              padding: '8px 12px',
-              background: '#1e293b',
+              padding: '10px 12px',
+              background: 'linear-gradient(180deg, #1e293b, #172033)',
               borderTop: '1px solid #334155',
               transition: 'background 0.2s',
             }}
@@ -437,7 +406,12 @@ export function GameScreen() {
                 </motion.span>
               )}
             </AnimatePresence>
-            <span style={{ marginRight: '4px', color: '#0ea5e9' }}>$</span>
+            <span
+              className="font-[family-name:var(--font-mono)] font-bold"
+              style={{ marginRight: '6px', color: '#22c55e' }}
+            >
+              $
+            </span>
             <input
               ref={inputRef}
               type="text"
@@ -445,7 +419,7 @@ export function GameScreen() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               className="flex-1 bg-transparent outline-none"
-              style={{ color: '#e2e8f0' }}
+              style={{ color: '#e2e8f0', caretColor: '#22c55e' }}
               placeholder={prefixActive ? t('game.prefixActive') : 'Type a tmux command...'}
               autoFocus
               disabled={isLevelComplete}
@@ -453,228 +427,48 @@ export function GameScreen() {
           </div>
         </motion.div>
 
-        {/* Right - Objectives Panel (light theme) */}
-        <div
-          className={`w-[40%] flex flex-col h-full overflow-hidden transition-all duration-500`}
-          style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            boxShadow: objectiveFlash
-              ? '0 2px 12px rgba(0,0,0,0.06), 0 0 0 2px rgba(34, 197, 94, 0.3)'
-              : '0 2px 12px rgba(0,0,0,0.06)',
-          }}
-        >
-          {/* Section 1: Task description card */}
-          <div style={{ padding: '20px 16px 0 16px' }}>
-            <div
-              className="stat-card"
-              style={{
-                background: '#f8fafc',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                borderLeft: '4px solid #0ea5e9',
-                padding: '16px',
-              }}
-            >
-              <div className="flex items-center justify-between" style={{ marginBottom: '8px' }}>
-                <span className="font-[family-name:var(--font-pixel)] text-sm" style={{ color: '#0ea5e9' }}>{t('game.task')}</span>
-                <span className="font-[family-name:var(--font-ui)] text-sm font-bold" style={{ color: '#0ea5e9' }}>
-                  {completedCount}/{totalObjectives}
-                </span>
-              </div>
-              <div
-                style={{
-                  marginBottom: '12px',
-                  height: '6px',
-                  borderRadius: '3px',
-                  background: '#e2e8f0',
-                  overflow: 'hidden',
-                }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressRatio * 100}%` }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                  style={{
-                    height: '100%',
-                    borderRadius: '3px',
-                    background: 'linear-gradient(90deg, #0ea5e9, #22c55e)',
-                  }}
-                />
-              </div>
-              <p className="text-sm font-[family-name:var(--font-ui)] leading-relaxed" style={{ color: '#64748b' }}>{t(currentLevel.descriptionKey)}</p>
-            </div>
-          </div>
-
-          {/* Section 2: Objectives list */}
-          <div style={{ padding: '16px 16px 0 16px' }}>
-            <div className="font-[family-name:var(--font-pixel)] text-xs tracking-wide" style={{ marginBottom: '12px', color: '#94a3b8' }}>OBJECTIVES</div>
-            <div className="flex flex-col" style={{ gap: '12px' }}>
-              {currentLevel.objectives.map((obj) => {
-                const completed = commandCount > 0 && validation.completedObjectives.includes(obj.id)
-                return (
-                  <motion.div
-                    key={obj.id}
-                    className="objective-card flex items-start"
-                    style={{
-                      gap: '12px',
-                      padding: '12px',
-                      borderRadius: '12px',
-                      border: completed
-                        ? '1px solid #bbf7d0'
-                        : '1px solid #e2e8f0',
-                      background: completed
-                        ? '#f0fdf4'
-                        : '#f8fafc',
-                      transition: 'all 0.3s',
-                    }}
-                    animate={completed ? { scale: [1, 1.02, 1] } : {}}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <motion.span
-                      className="text-lg flex-shrink-0"
-                      style={{ marginTop: '2px' }}
-                      animate={completed ? { scale: [1, 1.3, 1] } : {}}
-                      transition={{ duration: 0.4 }}
-                    >
-                      {completed ? '\u2705' : '\u2B1C'}
-                    </motion.span>
-                    <span
-                      className={`font-[family-name:var(--font-ui)] text-sm leading-relaxed ${completed ? 'font-semibold' : ''}`}
-                      style={{ color: completed ? '#16a34a' : '#64748b' }}
-                    >
-                      {t(obj.descriptionKey)}
-                    </span>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Section 3: Command hint card */}
-          <div style={{ padding: '16px 16px 0 16px' }}>
-            <div
-              style={{
-                background: '#fffbeb',
-                border: '1px solid #fde68a',
-                borderRadius: '12px',
-                padding: '16px',
-              }}
-            >
-              <div className="font-[family-name:var(--font-pixel)] text-xs flex items-center" style={{ color: '#92400e', marginBottom: '8px', gap: '8px' }}>
-                <span className="text-base">{'\uD83D\uDCA1'}</span>
-                COMMAND HINT
-              </div>
-              <p className="text-sm font-[family-name:var(--font-mono)] leading-relaxed" style={{ color: '#92400e' }}>
-                {renderHintText(t(getHint(currentLevel, 1)))}
-              </p>
-            </div>
-          </div>
-
-          {/* Spacer to push stats down */}
-          <div className="flex-1" />
-
-          {/* Section 4: Stats row of 3 mini-cards */}
-          <div style={{ padding: '0 16px 20px 16px' }}>
-            <div className="flex" style={{ gap: '12px' }}>
-              <div
-                className="flex-1 text-center stat-card"
-                style={{
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  padding: '12px',
-                }}
-              >
-                <div className="text-xl" style={{ marginBottom: '4px' }}>{'\u2328\uFE0F'}</div>
-                <div className="font-[family-name:var(--font-ui)] text-xs" style={{ marginBottom: '4px', color: '#94a3b8' }}>CMDS</div>
-                <div className="font-[family-name:var(--font-pixel)] text-2xl" style={{ color: '#0ea5e9' }}>{commandCount}</div>
-              </div>
-              <div
-                className="flex-1 text-center stat-card"
-                style={{
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  padding: '12px',
-                }}
-              >
-                <div className="text-xl" style={{ marginBottom: '4px' }}>{'\uD83C\uDFAF'}</div>
-                <div className="font-[family-name:var(--font-ui)] text-xs" style={{ marginBottom: '4px', color: '#94a3b8' }}>OPTIMAL</div>
-                <div className="font-[family-name:var(--font-pixel)] text-2xl" style={{ color: '#1e293b' }}>{currentLevel.optimalSteps}</div>
-              </div>
-              <div
-                className="flex-1 text-center stat-card"
-                style={{
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  padding: '12px',
-                }}
-              >
-                <div className="text-xl" style={{ marginBottom: '4px' }}>{'\u26A1'}</div>
-                <div className="font-[family-name:var(--font-ui)] text-xs" style={{ marginBottom: '4px', color: '#94a3b8' }}>EFF.</div>
-                <div
-                  className="font-[family-name:var(--font-pixel)] text-2xl"
-                  style={{ color: efficiency >= 100 ? '#22c55e' : efficiency >= 67 ? '#f59e0b' : '#ef4444' }}
-                >
-                  {commandCount > 0 ? `${efficiency}%` : '--'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Right - Objectives Panel */}
+        <ObjectivesPanel
+          currentLevel={currentLevel}
+          validation={validation}
+          commandCount={commandCount}
+          objectiveFlash={objectiveFlash}
+          efficiency={efficiency}
+          optimalSteps={currentLevel.optimalSteps}
+        />
       </div>
 
       {/* Bottom Task Bar */}
       <div
-        className="flex items-center justify-between"
+        className="flex items-center justify-between shrink-0"
         style={{
-          padding: '14px 24px',
-          background: '#ffffff',
-          borderTop: '1px solid #e2e8f0',
-          boxShadow: '0 -1px 4px rgba(0, 0, 0, 0.04)',
+          padding: '10px 20px',
+          background: 'linear-gradient(135deg, #1e293b, #334155)',
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
         }}
       >
-        <div className="flex items-center font-[family-name:var(--font-ui)] text-sm" style={{ gap: '16px' }}>
+        <div className="flex items-center gap-3">
           {/* Quick ref commands */}
-          <div className="flex items-center" style={{ gap: '8px' }}>
-            <span className="font-[family-name:var(--font-pixel)] text-xs" style={{ marginRight: '4px', color: '#94a3b8' }}>REF:</span>
-            {quickRef.slice(0, 4).map((cmd, i) => (
-              <span
-                key={i}
-                className="text-xs font-[family-name:var(--font-mono)]"
-                style={{
-                  padding: '4px 12px',
-                  borderRadius: '9999px',
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
-                  color: '#0ea5e9',
-                }}
-              >
-                {cmd}
-              </span>
-            ))}
-          </div>
+          <span className="font-[family-name:var(--font-pixel)] text-[10px] text-slate-500 tracking-wider mr-1">REF</span>
+          {quickRef.slice(0, 4).map((cmd, i) => (
+            <span
+              key={i}
+              className="text-[11px] font-[family-name:var(--font-mono)] px-2.5 py-1 rounded-md"
+              style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.2)', color: '#38bdf8' }}
+            >
+              {cmd}
+            </span>
+          ))}
           {/* Combo counter */}
           <AnimatePresence>
             {comboCount > 1 && (
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
-                animate={{
-                  scale: [1, 1.1, 1],
-                  opacity: 1,
-                }}
+                animate={{ scale: [1, 1.1, 1], opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="font-[family-name:var(--font-pixel)] text-xs"
-                style={{
-                  padding: '4px 12px',
-                  borderRadius: '9999px',
-                  color: comboColor(comboCount),
-                  ...comboBgStyle(comboCount),
-                }}
+                className="font-[family-name:var(--font-pixel)] text-xs px-3 py-1 rounded-full"
+                style={{ color: comboColor(comboCount), ...comboBgStyle(comboCount) }}
               >
                 <motion.span
                   animate={{ scale: [1, 1.08, 1] }}
@@ -686,52 +480,31 @@ export function GameScreen() {
             )}
           </AnimatePresence>
         </div>
-        <div className="flex items-center" style={{ gap: '12px' }}>
+        <div className="flex items-center gap-2.5">
           {error && (
-            <span
-              className="font-[family-name:var(--font-ui)] text-xs"
-              style={{
-                marginRight: '8px',
-                padding: '4px 12px',
-                borderRadius: '9999px',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#dc2626',
-              }}
-            >
+            <span className="font-[family-name:var(--font-ui)] text-xs mr-1 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
               {error}
             </span>
           )}
           <button
             onClick={handleRetry}
-            className="text-sm font-[family-name:var(--font-ui)]"
-            style={{
-              padding: '8px 20px',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              color: '#64748b',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className="text-xs font-[family-name:var(--font-ui)] px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 hover:bg-white/15"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#94a3b8' }}
           >
-            {'\uD83D\uDD04'} {t('game.retry')}
+            🔄 {t('game.retry')}
           </button>
           <button
             onClick={handleHint}
             disabled={currentHintLevel >= 3 || isLevelComplete}
-            className="text-sm font-[family-name:var(--font-ui)] disabled:opacity-30"
+            className="text-xs font-[family-name:var(--font-ui)] px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 disabled:opacity-30"
             style={{
-              padding: '8px 20px',
-              background: '#fffbeb',
-              border: '1px solid #fde68a',
-              borderRadius: '8px',
-              color: '#92400e',
+              background: 'rgba(245,158,11,0.12)',
+              border: '1px solid rgba(245,158,11,0.25)',
+              color: '#fbbf24',
               cursor: currentHintLevel >= 3 || isLevelComplete ? 'default' : 'pointer',
-              transition: 'all 0.2s',
             }}
           >
-            {'\uD83D\uDCA1'} {t('game.hint')} ({3 - currentHintLevel})
+            💡 {t('game.hint')} ({3 - currentHintLevel})
           </button>
         </div>
       </div>
@@ -772,260 +545,15 @@ export function GameScreen() {
       </AnimatePresence>
 
       {/* Level Complete Modal */}
-      <AnimatePresence>
-        {isLevelComplete && (() => {
-          const stars = calculateStars(commandCount, currentLevel!.optimalSteps, hintsUsed)
-          const starCount = (stars.completed ? 1 : 0) + (stars.efficient ? 1 : 0) + (stars.noHints ? 1 : 0)
-          const isPerfect = starCount === 3
-          return (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center z-50"
-            style={{ background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)' }}
-          >
-            {/* Confetti particles */}
-            {Array.from({ length: isPerfect ? 24 : 12 }).map((_, i) => (
-              <motion.div
-                key={`confetti-${i}`}
-                initial={{
-                  opacity: 1,
-                  x: 0, y: 0,
-                  scale: Math.random() * 0.5 + 0.5,
-                }}
-                animate={{
-                  opacity: [1, 1, 0],
-                  x: (Math.random() - 0.5) * 500,
-                  y: Math.random() * -300 - 100,
-                  rotate: Math.random() * 720 - 360,
-                }}
-                transition={{
-                  duration: 1.8 + Math.random() * 0.8,
-                  delay: Math.random() * 0.4,
-                  ease: [0.2, 0.8, 0.4, 1],
-                }}
-                style={{
-                  position: 'absolute',
-                  width: `${Math.random() * 8 + 4}px`,
-                  height: `${Math.random() * 8 + 4}px`,
-                  borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                  background: ['#f59e0b', '#0ea5e9', '#ec4899', '#10b981', '#8b5cf6', '#f97316'][i % 6],
-                }}
-              />
-            ))}
-
-            <motion.div
-              initial={{ scale: 0.6, opacity: 0, y: 40 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.1 }}
-              className="text-center relative"
-              style={{
-                padding: '36px 40px 32px',
-                width: '380px',
-                maxWidth: '90vw',
-                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                borderRadius: '24px',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255,255,255,0.1)',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Top accent bar */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
-                background: isPerfect
-                  ? 'linear-gradient(90deg, #f59e0b, #ec4899, #8b5cf6, #0ea5e9, #10b981)'
-                  : 'linear-gradient(90deg, #0ea5e9, #38bdf8)',
-              }} />
-
-              {/* Title */}
-              <motion.div
-                initial={{ y: -10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <h2 className="font-[family-name:var(--font-pixel)]"
-                  style={{ fontSize: '20px', color: '#0f172a', marginBottom: '4px' }}
-                >
-                  {t('game.levelComplete')}
-                </h2>
-                <p className="font-[family-name:var(--font-ui)]"
-                  style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '24px' }}
-                >
-                  {currentLevel?.titleKey ? t(currentLevel.titleKey) : ''}
-                </p>
-              </motion.div>
-
-              {/* Stars */}
-              <div className="flex justify-center items-end" style={{ gap: '20px', marginBottom: '24px' }}>
-                {(['completed', 'efficient', 'noHints'] as const).map((key, i) => {
-                  const earned = key === 'completed' ? stars.completed : key === 'efficient' ? stars.efficient : stars.noHints
-                  return (
-                    <motion.div
-                      key={key}
-                      initial={{ scale: 0, y: 20 }}
-                      animate={{ scale: 1, y: 0 }}
-                      transition={{ delay: 0.3 + i * 0.15, type: 'spring', stiffness: 400, damping: 15 }}
-                      className="text-center"
-                      style={{ width: '90px' }}
-                    >
-                      <div style={{
-                        position: 'relative',
-                        display: 'inline-block',
-                        marginBottom: '8px',
-                      }}>
-                        {/* Glow behind earned star */}
-                        {earned && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: [0.4, 0.7, 0.4], scale: 1 }}
-                            transition={{ delay: 0.5 + i * 0.15, duration: 2, repeat: Infinity }}
-                            style={{
-                              position: 'absolute', inset: '-8px',
-                              borderRadius: '50%',
-                              background: 'radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%)',
-                            }}
-                          />
-                        )}
-                        <span style={{
-                          fontSize: earned ? '36px' : '28px',
-                          display: 'block',
-                          filter: earned ? 'drop-shadow(0 2px 6px rgba(245,158,11,0.4))' : 'grayscale(1)',
-                          opacity: earned ? 1 : 0.25,
-                          transition: 'all 0.3s',
-                        }}>
-                          {'\u2B50'}
-                        </span>
-                      </div>
-                      <span
-                        className="font-[family-name:var(--font-ui)] block"
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: earned ? 600 : 400,
-                          color: earned ? '#334155' : '#cbd5e1',
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {t(`game.stars.${key}`)}
-                      </span>
-                    </motion.div>
-                  )
-                })}
-              </div>
-
-              {/* Stats */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="flex justify-center"
-                style={{
-                  gap: '2px',
-                  marginBottom: '28px',
-                  background: '#f1f5f9',
-                  borderRadius: '12px',
-                  padding: '10px 0',
-                }}
-              >
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div className="font-[family-name:var(--font-mono)]"
-                    style={{ fontSize: '18px', fontWeight: 700, color: '#0ea5e9' }}
-                  >
-                    {commandCount}
-                  </div>
-                  <div className="font-[family-name:var(--font-ui)]"
-                    style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}
-                  >
-                    {t('game.commands')}
-                  </div>
-                </div>
-                <div style={{ width: '1px', background: '#e2e8f0', margin: '4px 0' }} />
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div className="font-[family-name:var(--font-mono)]"
-                    style={{ fontSize: '18px', fontWeight: 700, color: '#10b981' }}
-                  >
-                    {currentLevel!.optimalSteps}
-                  </div>
-                  <div className="font-[family-name:var(--font-ui)]"
-                    style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}
-                  >
-                    {t('game.optimal')}
-                  </div>
-                </div>
-                <div style={{ width: '1px', background: '#e2e8f0', margin: '4px 0' }} />
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div className="font-[family-name:var(--font-mono)]"
-                    style={{ fontSize: '18px', fontWeight: 700, color: '#f59e0b' }}
-                  >
-                    {starCount}/3
-                  </div>
-                  <div className="font-[family-name:var(--font-ui)]"
-                    style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}
-                  >
-                    {'\u2B50'}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Buttons */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="flex justify-center"
-                style={{ gap: '10px' }}
-              >
-                <button
-                  onClick={handleRetry}
-                  className="font-[family-name:var(--font-ui)]"
-                  style={{
-                    padding: '10px 24px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    background: '#ffffff',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: '12px',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#ffffff' }}
-                >
-                  {t('game.retry')}
-                </button>
-                <button onClick={() => {
-                  const currentIndex = allLevels.findIndex(l => l.id === currentLevel?.id)
-                  const next = currentIndex >= 0 ? allLevels[currentIndex + 1] : null
-                  if (next) {
-                    startLevel(next)
-                  } else {
-                    setScreen('level-select')
-                  }
-                }}
-                  className="font-[family-name:var(--font-ui)] font-bold"
-                  style={{
-                    padding: '10px 28px',
-                    fontSize: '13px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
-                    color: '#ffffff',
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(14, 165, 233, 0.35)',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(14, 165, 233, 0.45)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(14, 165, 233, 0.35)'; e.currentTarget.style.transform = 'translateY(0)' }}
-                >
-                  {t('game.nextLevel')} {'\u2192'}
-                </button>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-          )
-        })()}
-      </AnimatePresence>
+      <CompletionModal
+        isVisible={isLevelComplete}
+        currentLevel={currentLevel}
+        commandCount={commandCount}
+        hintsUsed={hintsUsed}
+        onRetry={handleRetry}
+        onNextLevel={handleNextLevel}
+        hasNextLevel={hasNextLevel}
+      />
     </div>
   )
 }

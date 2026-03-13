@@ -20,7 +20,6 @@ export function ChallengeScreen() {
   const { t } = useTranslation()
   const setScreen = useGameStore(s => s.setScreen)
   const addChallengeRecord = useProgressStore(s => s.addChallengeRecord)
-  const checkContextAchievements = useProgressStore(s => s.checkContextAchievements)
   const language = useUserStore(s => s.language)
 
   const [goal, setGoal] = useState<ChallengeGoal>(() => generateChallenge('beginner', language))
@@ -64,9 +63,8 @@ export function ChallengeScreen() {
         commandCount,
         targetDescription: goal.description,
       })
-      checkContextAchievements({ challengeTime })
     }
-  }, [state, goal, isRunning, isComplete, timeLeft, commandCount, addChallengeRecord, checkContextAchievements])
+  }, [state, goal, isRunning, isComplete, timeLeft, commandCount, addChallengeRecord])
 
   const handleCommand = useCallback((raw: string) => {
     const result = parser.parseInput(raw)
@@ -114,14 +112,13 @@ export function ChallengeScreen() {
   const isLastTen = timeLeft <= 10 && isRunning
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#f0f4ff' }}>
+    <div className="flex flex-col h-screen" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #fff8eb 50%, #f0f4ff 100%)' }}>
       {/* Top Bar */}
       <div
-        className="flex items-center justify-between"
+        className="flex items-center justify-between glass"
         style={{
           padding: '12px 20px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid rgba(226,232,240,0.8)',
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}
       >
@@ -162,16 +159,23 @@ export function ChallengeScreen() {
           {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
         </div>
 
-        <span
+        <div
           className="font-[family-name:var(--font-ui)] text-sm font-semibold"
-          style={{ color: '#64748b' }}
+          style={{
+            padding: '4px 14px',
+            borderRadius: '9999px',
+            background: 'rgba(14,165,233,0.08)',
+            border: '1px solid rgba(14,165,233,0.2)',
+            color: '#64748b',
+          }}
         >
-          CMD: <span style={{ color: '#0ea5e9' }}>{commandCount}</span>
-        </span>
+          CMD: <span style={{ color: '#0ea5e9', fontFamily: 'var(--font-pixel)' }}>{commandCount}</span>
+        </div>
       </div>
 
       {/* Goal Description */}
       <div
+        className="relative overflow-hidden"
         style={{
           margin: '12px 16px 0',
           padding: '12px 16px',
@@ -181,9 +185,13 @@ export function ChallengeScreen() {
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}
       >
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1"
+          style={{ background: 'linear-gradient(180deg, #fbbf24, #f59e0b)', borderRadius: '12px 0 0 12px' }}
+        />
         <p
           className="font-[family-name:var(--font-ui)] text-sm"
-          style={{ color: '#1e293b' }}
+          style={{ color: '#1e293b', paddingLeft: '8px' }}
         >
           {'\uD83C\uDFAF'} {goal.description}
         </p>
@@ -211,26 +219,37 @@ export function ChallengeScreen() {
 
         {/* Command output - keep dark for terminal realism */}
         <div
-          className="overflow-y-auto font-[family-name:var(--font-mono)] text-xs"
+          className="overflow-y-auto font-[family-name:var(--font-mono)] text-xs leading-relaxed"
           style={{
             height: '80px',
             margin: '8px 16px 0',
-            padding: '12px',
-            borderRadius: '12px',
-            background: '#1e293b',
+            padding: '8px 10px',
+            background: '#0f172a',
             border: '1px solid #334155',
+            borderRadius: '12px',
           }}
         >
-          {output.slice(-8).map((line, i) => (
+          {output.length === 0 ? (
             <div
-              key={i}
-              style={{
-                color: line.startsWith('Error') ? '#ef4444' : '#94a3b8',
-              }}
+              className="h-full flex items-center justify-center"
+              style={{ color: '#334155', fontSize: '0.75rem', letterSpacing: '0.05em' }}
             >
-              {line}
+              {t('game.outputPlaceholder')}
             </div>
-          ))}
+          ) : output.slice(-8).map((line, i) => {
+            if (line.startsWith('Error')) {
+              return <div key={i} style={{ color: '#ef4444' }}>{line}</div>
+            }
+            if (line.startsWith('$ ')) {
+              return (
+                <div key={i}>
+                  <span style={{ color: '#22c55e', fontWeight: 600 }}>$ </span>
+                  <span style={{ color: '#e2e8f0' }}>{line.slice(2)}</span>
+                </div>
+              )
+            }
+            return <div key={i} style={{ color: '#64748b' }}>{line}</div>
+          })}
         </div>
 
         {/* Input - keep dark for terminal realism */}
@@ -240,17 +259,17 @@ export function ChallengeScreen() {
             margin: '8px 16px 12px',
             padding: '10px 16px',
             borderRadius: '12px',
-            background: '#1e293b',
+            background: 'linear-gradient(180deg, #1e293b, #172033)',
             border: '1px solid #334155',
           }}
         >
-          <span style={{ marginRight: '8px', color: '#0ea5e9', fontWeight: 'bold' }}>$</span>
+          <span className="font-[family-name:var(--font-mono)] font-bold" style={{ marginRight: '8px', color: '#22c55e' }}>$</span>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             className="flex-1 bg-transparent outline-none"
-            style={{ color: '#e2e8f0' }}
+            style={{ color: '#e2e8f0', caretColor: '#22c55e' }}
             disabled={!isRunning}
             autoFocus
           />

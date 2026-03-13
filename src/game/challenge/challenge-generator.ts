@@ -39,7 +39,7 @@ export function generateChallenge(difficulty: ChallengeDifficulty, lang: Lang = 
 
 function generateBeginner(lang: Lang): ChallengeGoal {
   const numWindows = randInt(2, 4)
-  const names = []
+  const names: string[] = []
   const layouts: string[] = []
   for (let i = 0; i < numWindows; i++) {
     const name = WINDOW_NAMES[i]

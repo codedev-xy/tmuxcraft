@@ -5,9 +5,12 @@
   },
   "home": {
     "startGame": "学习模式",
+    "startGameDesc": "按章节闯关，掌握 tmux 核心技能",
     "challenge": "挑战模式",
+    "challengeDesc": "限时闯关，挑战极限操作速度",
     "reference": "命令手册",
-    "settings": "设置"
+    "settings": "设置",
+    "settingsDesc": "语言偏好及个人设置"
   },
   "welcome": {
     "title": "欢迎来到 TmuxCraft!",
@@ -67,6 +70,8 @@
   },
   "game": {
     "task": "任务",
+    "taskObjectives": "任务目标",
+    "outputPlaceholder": "— 输入命令后将在此显示输出 —",
     "hint": "提示",
     "hintsRemaining": "剩余 {{count}} 次",
     "commands": "命令数",
@@ -74,6 +79,7 @@
     "optimal": "最优解",
     "steps": "{{count}} 步",
     "stepsShort": "步",
+    "locked": "🔐 完成前关解锁",
     "levelComplete": "关卡完成！",
     "stars": {
       "completed": "完成关卡",

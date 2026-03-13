@@ -83,6 +83,7 @@ export function SettingsScreen() {
         <div className="max-w-2xl w-full" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Command Reference Card */}
           <div
+            className="relative overflow-hidden"
             style={{
               padding: '24px 32px',
               background: '#ffffff',
@@ -102,6 +103,7 @@ export function SettingsScreen() {
               e.currentTarget.style.borderColor = '#e2e8f0'
             }}
           >
+            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: 'linear-gradient(180deg, #38bdf8, #0284c7)' }} />
             <div className="flex items-center justify-between">
               <div>
                 <label
@@ -114,12 +116,13 @@ export function SettingsScreen() {
                   {isZh ? '查看所有 tmux 命令和快捷键' : 'View all tmux commands and shortcuts'}
                 </p>
               </div>
-              <span className="text-xl" style={{ color: '#94a3b8' }}>{'\u2192'}</span>
+              <span className="text-xl" style={{ color: '#0284c7' }}>{'\u2192'}</span>
             </div>
           </div>
 
           {/* Language Card */}
           <div
+            className="relative overflow-hidden"
             style={{
               padding: '24px 32px',
               background: '#ffffff',
@@ -137,6 +140,7 @@ export function SettingsScreen() {
               e.currentTarget.style.borderColor = '#e2e8f0'
             }}
           >
+            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: 'linear-gradient(180deg, #8b5cf6, #6d28d9)' }} />
             <label
               className="block text-lg font-[family-name:var(--font-pixel)]"
               style={{ marginBottom: '16px', color: '#1e293b' }}
@@ -171,6 +175,7 @@ export function SettingsScreen() {
 
           {/* About Card */}
           <div
+            className="relative overflow-hidden"
             style={{
               padding: '24px 32px',
               background: '#ffffff',
@@ -188,6 +193,7 @@ export function SettingsScreen() {
               e.currentTarget.style.borderColor = '#e2e8f0'
             }}
           >
+            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: 'linear-gradient(180deg, #94a3b8, #64748b)' }} />
             <label
               className="block text-lg font-[family-name:var(--font-pixel)]"
               style={{ marginBottom: '16px', color: '#1e293b' }}
@@ -235,6 +241,7 @@ export function SettingsScreen() {
 
           {/* Reset Card */}
           <div
+            className="relative overflow-hidden"
             style={{
               padding: '24px 32px',
               background: '#fef2f2',
@@ -243,6 +250,7 @@ export function SettingsScreen() {
               boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
             }}
           >
+            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: 'linear-gradient(180deg, #f87171, #dc2626)' }} />
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <label

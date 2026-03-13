@@ -1,11 +1,5 @@
 import type { LayoutNode, Pane, PaneLayout, Rect, PresetLayout } from './types'
 
-let paneCounter = 100
-
-export function generatePaneId(): string {
-  return `pane-${++paneCounter}`
-}
-
 export function calculateLayout(tree: LayoutNode, bounds: Rect): PaneLayout[] {
   if (tree.type === 'pane' && tree.pane) {
     return [{ paneId: tree.pane.id, x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }]
@@ -32,11 +26,11 @@ export function calculateLayout(tree: LayoutNode, bounds: Rect): PaneLayout[] {
   return []
 }
 
-export function splitPane(tree: LayoutNode, paneId: string, direction: 'horizontal' | 'vertical'): { tree: LayoutNode; newPaneId: string } {
-  const newPaneId = generatePaneId()
-  const newPane: Pane = { id: newPaneId, content: [], cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' }
+export function splitPane(tree: LayoutNode, paneId: string, direction: 'horizontal' | 'vertical', newPaneId?: string): { tree: LayoutNode; newPaneId: string } {
+  const id = newPaneId ?? `pane-${Date.now()}`
+  const newPane: Pane = { id, content: [], cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' }
   const newTree = splitPaneInTree(tree, paneId, direction, newPane)
-  return { tree: newTree, newPaneId }
+  return { tree: newTree, newPaneId: id }
 }
 
 function splitPaneInTree(node: LayoutNode, paneId: string, direction: 'horizontal' | 'vertical', newPane: Pane): LayoutNode {

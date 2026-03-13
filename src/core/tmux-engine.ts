@@ -53,7 +53,7 @@ export class TmuxEngine {
       case 'set-window-option':
       case 'bind-key':
       case 'unbind-key':
-      case 'source-file':
+      case 'source-file': this.sourceFile(args.file as string || '~/.tmux.conf'); break
       case 'send-keys':
       case 'enter-copy-mode': this.enterCopyMode(); break
       case 'paste': this.pasteToPane(); break
@@ -209,7 +209,7 @@ export class TmuxEngine {
   private splitPane(direction: 'horizontal' | 'vertical'): void {
     const win = this.getActiveWindow()
     if (!win) return
-    const { tree, newPaneId } = Layout.splitPane(win.layoutTree, win.activePaneId, direction)
+    const { tree, newPaneId } = Layout.splitPane(win.layoutTree, win.activePaneId, direction, this.nextId('pane'))
     this.updateActiveWindow({ layoutTree: tree, activePaneId: newPaneId })
     this.emit({ type: 'pane-split' })
   }
@@ -329,7 +329,7 @@ export class TmuxEngine {
     if (!win) return
 
     const firstPane = sourcePanes[0]
-    const { tree: newTree } = Layout.splitPane(win.layoutTree, win.activePaneId, 'horizontal')
+    const { tree: newTree } = Layout.splitPane(win.layoutTree, win.activePaneId, 'horizontal', this.nextId('pane'))
     const allNew = Layout.getAllPanes(newTree)
     const addedPane = allNew.find(p => !Layout.findPane(win.layoutTree, p.id))
 
@@ -338,7 +338,7 @@ export class TmuxEngine {
       resultTree = this.replacePaneInTree(newTree, addedPane.id, firstPane)
     }
 
-    const newWindows = session.windows.filter((_, i) => i !== sourceIdx).map((w, i) => {
+    const newWindows = session.windows.filter((_, i) => i !== sourceIdx).map((w) => {
       if (w.id === win.id) return { ...w, layoutTree: resultTree }
       return w
     })
@@ -485,11 +485,16 @@ export class TmuxEngine {
   }
 
   private setOption(option: string, value: string): void {
-    if (option === 'prefix') {
-      // handled by keybinding-handler, not engine state
+    this.state = {
+      ...this.state,
+      setOptions: { ...this.state.setOptions, [option]: value },
     }
-    if (option === 'mouse') {
-      // UI-level setting
+  }
+
+  private sourceFile(file: string): void {
+    this.state = {
+      ...this.state,
+      sourcedFiles: [...this.state.sourcedFiles, file],
     }
   }
 
@@ -502,7 +507,7 @@ export class TmuxEngine {
     const win = this.makeWindow(winId, 'bash', { type: 'pane', pane }, paneId)
     const sessId = this.nextId('sess')
     const session: Session = { id: sessId, name: '0', windows: [win], activeWindowIndex: 0 }
-    return { sessions: [session], activeSessionId: sessId, clipboard: '', isDetached: false }
+    return { sessions: [session], activeSessionId: sessId, clipboard: '', isDetached: false, setOptions: {}, sourcedFiles: [] }
   }
 
   private makePane(id: string): Pane {

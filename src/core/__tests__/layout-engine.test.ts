@@ -13,7 +13,7 @@ import {
   containsPane,
   getAdjacentPane,
 } from '../layout-engine'
-import type { LayoutNode, Pane, Rect } from '../types'
+import type { LayoutNode, Rect } from '../types'
 
 function makePaneNode(id: string, content: string[] = []): LayoutNode {
   return { type: 'pane', pane: { id, content, cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' } }
@@ -91,7 +91,7 @@ describe('splitPane', () => {
 
   it('splits a single pane vertically', () => {
     const tree = makePaneNode('p1')
-    const { tree: newTree, newPaneId } = splitPane(tree, 'p1', 'vertical')
+    const { tree: newTree } = splitPane(tree, 'p1', 'vertical')
     expect(newTree.type).toBe('split')
     expect(newTree.direction).toBe('vertical')
     expect(countPanes(newTree)).toBe(2)

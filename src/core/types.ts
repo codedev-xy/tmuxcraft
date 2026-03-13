@@ -5,6 +5,8 @@ export interface TmuxState {
   activeSessionId: string
   clipboard: string
   isDetached: boolean
+  setOptions: Record<string, string>
+  sourcedFiles: string[]
 }
 
 export interface Session {

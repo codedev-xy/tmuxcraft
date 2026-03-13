@@ -142,26 +142,32 @@ export function ChallengeSelect() {
                   e.currentTarget.style.borderColor = '#e2e8f0'
                 }}
               >
-                {/* Colored top accent strip */}
+                {/* Gradient header with emoji */}
                 <div
-                  className="w-full"
+                  className="w-full flex items-center justify-center relative"
                   style={{
-                    height: '6px',
+                    height: '120px',
                     background: diff.gradient,
                     borderRadius: '19px 19px 0 0',
                   }}
-                />
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)',
+                      borderRadius: '19px 19px 0 0',
+                    }}
+                  />
+                  <span className="text-6xl drop-shadow-lg relative z-10">{diff.emoji}</span>
+                </div>
 
                 <div
                   className="flex flex-col items-center flex-1 justify-center"
-                  style={{ padding: '32px', gap: '16px' }}
+                  style={{ padding: '24px 24px 28px', gap: '12px' }}
                 >
-                  {/* Emoji */}
-                  <span className="text-7xl">{diff.emoji}</span>
-
                   {/* Difficulty name */}
                   <h3
-                    className="font-[family-name:var(--font-pixel)] text-2xl font-bold"
+                    className="font-[family-name:var(--font-pixel)] text-xl font-bold"
                     style={{ color: diff.color }}
                   >
                     {t(`challenge.${diff.key}`)}
@@ -169,29 +175,26 @@ export function ChallengeSelect() {
 
                   {/* Description */}
                   <p
-                    className="font-[family-name:var(--font-ui)] text-base leading-relaxed"
+                    className="font-[family-name:var(--font-ui)] text-sm leading-relaxed"
                     style={{ color: '#64748b' }}
                   >
                     {t(`challenge.${diff.key}Desc`)}
                   </p>
 
-                  {/* Time limit */}
+                  {/* Time limit pill */}
                   <div
-                    className="flex items-center gap-2 font-[family-name:var(--font-ui)] text-base"
+                    className="flex items-center gap-2 font-[family-name:var(--font-ui)] text-sm"
                     style={{
-                      marginTop: '8px',
-                      padding: '8px 20px',
+                      marginTop: '4px',
+                      padding: '6px 16px',
                       borderRadius: '9999px',
-                      background: '#f0f4ff',
-                      border: '1px solid #e2e8f0',
-                      color: '#64748b',
+                      background: `${diff.color}10`,
+                      border: `1px solid ${diff.color}25`,
+                      color: diff.color,
                     }}
                   >
                     <span>{'\u23F1\uFE0F'}</span>
-                    <span
-                      className="font-[family-name:var(--font-pixel)] font-semibold"
-                      style={{ color: diff.color }}
-                    >
+                    <span className="font-[family-name:var(--font-pixel)] font-bold">
                       {diff.timeLimit}s
                     </span>
                   </div>

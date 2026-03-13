@@ -1,4 +1,4 @@
-import type { TmuxState, LayoutNode, CommandType } from '@/core/types'
+import type { TmuxState, CommandType } from '@/core/types'
 
 // ===== Level Types =====
 

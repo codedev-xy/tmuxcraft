@@ -87,7 +87,7 @@ When adding/modifying levels:
 - If the validator checks for specific names, numbers, or targets, the description **must** state them explicitly (e.g., "将窗口命名为 'editor'" not "起有意义的名字").
 - When a level has multiple distinct sub-goals, split into multiple objectives with individual `descriptionKey` entries under `game.objectives.X-Y-key` (see 1-9 and 1-11 as examples). Single-objective levels are fine when the task is genuinely singular and unambiguous.
 - The description shown in the level select screen (`levels.X-Y.description`) should give a clear summary; the per-objective descriptions (`game.objectives.X-Y-key`) provide specific checkable steps.
-- Known weak validators: 3-3 (Status Bar) and 3-4 (Config File) have validators that only check `sessions.length >= 1`, which is effectively a no-op. These need proper validation logic if the levels are reworked.
+- `TmuxState` includes `setOptions: Record<string, string>` and `sourcedFiles: string[]` to track `set-option` and `source-file` commands. Level validators (e.g., 3-3, 3-4) use these fields.
 
 ### i18n
 

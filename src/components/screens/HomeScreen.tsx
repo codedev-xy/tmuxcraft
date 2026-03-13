@@ -12,30 +12,33 @@ const MAIN_CARDS = [
     screen: 'chapter-select' as const,
     emoji: '\uD83D\uDCD6',
     gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-    shadowBase: '0 6px 0 #0369a1, 0 8px 20px rgba(14, 165, 233, 0.25)',
+    headerGradient: 'linear-gradient(135deg, #38bdf8, #0ea5e9)',
     glowColor: 'rgba(14,165,233,0.3)',
-    iconBg: 'rgba(14, 165, 233, 0.1)',
+    iconBg: 'rgba(255, 255, 255, 0.25)',
     titleColor: '#0284c7',
+    descKey: 'home.startGameDesc',
   },
   {
     key: 'challenge',
     screen: 'challenge-select' as const,
     emoji: '\uD83C\uDFAF',
     gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    shadowBase: '0 6px 0 #b45309, 0 8px 20px rgba(245, 158, 11, 0.25)',
+    headerGradient: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
     glowColor: 'rgba(245,158,11,0.3)',
-    iconBg: 'rgba(245, 158, 11, 0.1)',
+    iconBg: 'rgba(255, 255, 255, 0.25)',
     titleColor: '#d97706',
+    descKey: 'home.challengeDesc',
   },
   {
     key: 'settings',
     screen: 'settings' as const,
     emoji: '\u2699\uFE0F',
     gradient: 'linear-gradient(135deg, #64748b, #475569)',
-    shadowBase: '0 6px 0 #334155, 0 8px 20px rgba(100, 116, 139, 0.25)',
+    headerGradient: 'linear-gradient(135deg, #94a3b8, #64748b)',
     glowColor: 'rgba(100,116,139,0.3)',
-    iconBg: 'rgba(100, 116, 139, 0.1)',
+    iconBg: 'rgba(255, 255, 255, 0.25)',
     titleColor: '#475569',
+    descKey: 'home.settingsDesc',
   },
 ]
 
@@ -263,12 +266,11 @@ export function HomeScreen() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.1, type: 'spring', stiffness: 150 }}
-              whileHover={{ scale: 1.04, y: -4 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ y: -8, transition: { duration: 0.2 } }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => setScreen(item.screen)}
-              className="rounded-2xl flex flex-col items-center justify-center gap-4 cursor-pointer border-0 relative overflow-hidden"
+              className="rounded-2xl flex flex-col items-center cursor-pointer border-0 relative overflow-hidden"
               style={{
-                padding: '36px 24px',
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
                 borderRadius: '20px',
@@ -276,7 +278,7 @@ export function HomeScreen() {
                 transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.boxShadow = `0 8px 32px ${item.glowColor}`
+                e.currentTarget.style.boxShadow = `0 12px 40px ${item.glowColor}`
                 e.currentTarget.style.borderColor = `${item.glowColor}`
               }}
               onMouseLeave={e => {
@@ -284,24 +286,56 @@ export function HomeScreen() {
                 e.currentTarget.style.borderColor = '#e2e8f0'
               }}
             >
-              {/* Emoji with circle background */}
+              {/* Gradient header with emoji */}
               <div
-                className="w-24 h-24 rounded-full flex items-center justify-center"
-                style={{ background: item.iconBg }}
+                className="w-full flex items-center justify-center relative"
+                style={{
+                  height: '120px',
+                  background: item.headerGradient,
+                  borderRadius: '19px 19px 0 0',
+                }}
               >
-                <span className="text-6xl lg:text-7xl">{item.emoji}</span>
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)',
+                    borderRadius: '19px 19px 0 0',
+                  }}
+                />
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center relative z-10"
+                  style={{ background: item.iconBg, border: '2px solid rgba(255,255,255,0.4)' }}
+                >
+                  <span className="text-5xl drop-shadow-lg">{item.emoji}</span>
+                </div>
               </div>
 
-              {/* Title */}
-              <span
-                className="font-[family-name:var(--font-pixel)] text-2xl font-bold"
-                style={{ color: item.titleColor }}
-              >
-                {t(`home.${item.key}`)}
-              </span>
+              {/* Card body */}
+              <div className="flex flex-col items-center gap-2" style={{ padding: '20px 24px 28px' }}>
+                {/* Title */}
+                <span
+                  className="font-[family-name:var(--font-pixel)] text-xl font-bold"
+                  style={{ color: item.titleColor }}
+                >
+                  {t(`home.${item.key}`)}
+                </span>
 
-              {/* Arrow indicator */}
-              <span className="text-lg font-[family-name:var(--font-ui)]" style={{ color: '#94a3b8' }}>{'\u2192'}</span>
+                {/* Description */}
+                <p
+                  className="font-[family-name:var(--font-ui)] text-sm leading-relaxed"
+                  style={{ color: '#94a3b8' }}
+                >
+                  {t(item.descKey)}
+                </p>
+
+                {/* Arrow indicator */}
+                <span
+                  className="font-[family-name:var(--font-ui)] text-sm font-semibold mt-1"
+                  style={{ color: item.titleColor }}
+                >
+                  {'\u2192'}
+                </span>
+              </div>
             </motion.button>
           ))}
         </div>

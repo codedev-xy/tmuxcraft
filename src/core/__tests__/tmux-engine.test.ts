@@ -29,6 +29,8 @@ describe('TmuxEngine', () => {
         activeSessionId: '',
         clipboard: '',
         isDetached: true,
+        setOptions: {},
+        sourcedFiles: [],
       }
       const eng = new TmuxEngine(custom)
       expect(eng.getState().sessions).toHaveLength(0)
@@ -228,7 +230,6 @@ describe('TmuxEngine', () => {
 
     it('toggles pane zoom', () => {
       engine.execute(cmd('split-horizontal'))
-      const paneId = engine.getActiveWindow()!.activePaneId
       engine.execute(cmd('zoom-pane'))
       const pane = engine.getActivePane()!
       expect(pane.isZoomed).toBe(true)
@@ -238,7 +239,6 @@ describe('TmuxEngine', () => {
 
     it('resizes pane', () => {
       engine.execute(cmd('split-vertical'))
-      const beforeRatio = engine.getActiveWindow()!.layoutTree.ratio
       engine.execute(cmd('resize-pane', { direction: 'right', amount: 10 }))
       // The ratio should change (new pane is on right, resizing right from it doesn't change root ratio)
       // Actually, the active pane is the right pane after split
@@ -249,7 +249,6 @@ describe('TmuxEngine', () => {
 
     it('swaps pane position', () => {
       engine.execute(cmd('split-horizontal'))
-      const panes = getAllPanes(engine.getActiveWindow()!.layoutTree)
       engine.execute(cmd('swap-pane', { direction: 'up' }))
       // After swap, pane data should be exchanged
       const newPanes = getAllPanes(engine.getActiveWindow()!.layoutTree)
@@ -373,6 +372,8 @@ describe('TmuxEngine', () => {
         activeSessionId: '',
         clipboard: 'test',
         isDetached: true,
+        setOptions: {},
+        sourcedFiles: [],
       }
       engine.reset(custom)
       expect(engine.getState().clipboard).toBe('test')

@@ -5,9 +5,12 @@
   },
   "home": {
     "startGame": "Learning Mode",
+    "startGameDesc": "Complete levels and master tmux step by step",
     "challenge": "Challenge Mode",
+    "challengeDesc": "Race against the clock and push your speed",
     "reference": "Command Reference",
-    "settings": "Settings"
+    "settings": "Settings",
+    "settingsDesc": "Language preferences and personal settings"
   },
   "welcome": {
     "title": "Welcome to TmuxCraft!",
@@ -67,6 +70,8 @@
   },
   "game": {
     "task": "Task",
+    "taskObjectives": "Mission",
+    "outputPlaceholder": "— enter a command to see output —",
     "hint": "Hint",
     "hintsRemaining": "{{count}} remaining",
     "commands": "Commands",
@@ -74,6 +79,7 @@
     "optimal": "Optimal",
     "steps": "{{count}} steps",
     "stepsShort": "steps",
+    "locked": "🔐 Complete previous level",
     "levelComplete": "Level Complete!",
     "stars": {
       "completed": "Level Completed",

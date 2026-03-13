@@ -105,8 +105,8 @@ const level3_3: LevelDefinition = {
       id: 'customize-status-bar',
       descriptionKey: 'levels.3-3.description',
       validate: (state) => {
-        // Simplified: user must execute set-option commands for status bar
-        return state.sessions.length >= 1
+        // User must set a status-bar related option (status-style, status-right, status-left, etc.)
+        return Object.keys(state.setOptions).some(key => key.startsWith('status'))
       },
     },
   ],
@@ -129,8 +129,8 @@ const level3_4: LevelDefinition = {
       id: 'load-config',
       descriptionKey: 'levels.3-4.description',
       validate: (state) => {
-        // User needs to source a config file
-        return state.sessions.length >= 1
+        // User needs to source a config file (e.g., ~/.tmux.conf)
+        return state.sourcedFiles.length > 0
       },
     },
   ],

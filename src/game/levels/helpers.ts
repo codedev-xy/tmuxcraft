@@ -21,7 +21,7 @@ export function makeSession(id: string, name: string, windows: Window[], activeW
 }
 
 export function makeState(sessions: Session[], activeSessionId: string, detached = false): TmuxState {
-  return { sessions, activeSessionId, clipboard: '', isDetached: detached }
+  return { sessions, activeSessionId, clipboard: '', isDetached: detached, setOptions: {}, sourcedFiles: [] }
 }
 
 export function singlePaneState(sessionName = '0', windowName = 'bash'): TmuxState {
