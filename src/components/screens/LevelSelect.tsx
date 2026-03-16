@@ -15,7 +15,7 @@ const CHAPTER_META: Record<number, { emoji: string; color: string; gradient: str
 export function LevelSelect() {
   const { t } = useTranslation()
   const { currentChapter, setScreen, startLevel } = useGameStore()
-  const { levelProgress, getChapterProgress, isLevelUnlocked } = useProgressStore()
+  const { levelProgress, getChapterProgress } = useProgressStore()
 
   const levels = currentChapter === 1 ? chapter1Levels : currentChapter === 2 ? chapter2Levels : chapter3Levels
   const progress = getChapterProgress(currentChapter)
@@ -232,23 +232,18 @@ export function LevelSelect() {
             {levels.map((level, i) => {
               const prog = levelProgress[level.id]
               const completed = prog?.completed
-              const locked = !isLevelUnlocked(level.id) && !completed
               const starCount = prog ? getStarCount(prog) : 0
 
               // Card styles by state
-              const cardBg = completed ? '#f0fdf4' : locked ? '#f8fafc' : '#ffffff'
+              const cardBg = completed ? '#f0fdf4' : '#ffffff'
               const cardBorder = completed
                 ? '1.5px solid #86efac'
-                : locked
-                  ? '1.5px solid #e2e8f0'
-                  : `1.5px solid ${meta.color}55`
+                : `1.5px solid ${meta.color}55`
               const cardShadow = completed
                 ? '0 2px 12px rgba(34, 197, 94, 0.1)'
-                : locked
-                  ? 'none'
-                  : `0 2px 12px ${meta.color}15`
+                : `0 2px 12px ${meta.color}15`
 
-              const badgeBg = completed ? '#22c55e' : locked ? '#cbd5e1' : meta.color
+              const badgeBg = completed ? '#22c55e' : meta.color
 
               return (
                 <motion.button
@@ -256,21 +251,20 @@ export function LevelSelect() {
                   initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.04, type: 'spring', stiffness: 120, damping: 14 }}
-                  whileHover={locked ? {} : { y: -6, transition: { duration: 0.15 } }}
-                  whileTap={locked ? {} : { scale: 0.96 }}
-                  onClick={() => !locked && startLevel(level)}
+                  whileHover={{ y: -6, transition: { duration: 0.15 } }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => startLevel(level)}
                   className="relative text-left transition-all min-h-[100px] flex items-stretch"
                   style={{
                     borderRadius: '16px',
                     background: cardBg,
                     border: cardBorder,
                     boxShadow: cardShadow,
-                    cursor: locked ? 'not-allowed' : 'pointer',
-                    opacity: locked ? 0.6 : 1,
+                    cursor: 'pointer',
                     transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
                   }}
                   onMouseEnter={e => {
-                    if (!locked) e.currentTarget.style.boxShadow = `0 8px 32px ${meta.color}25`
+                    e.currentTarget.style.boxShadow = `0 8px 32px ${meta.color}25`
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.boxShadow = cardShadow
@@ -279,7 +273,7 @@ export function LevelSelect() {
                   {/* Colored left accent bar */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-                    style={{ background: completed ? '#4ade80' : locked ? '#e2e8f0' : meta.color }}
+                    style={{ background: completed ? '#4ade80' : meta.color }}
                   />
 
                   <div className="flex flex-col justify-between w-full" style={{ padding: '16px 16px 16px 20px' }}>
@@ -289,7 +283,7 @@ export function LevelSelect() {
                         className="w-9 h-9 rounded-full flex items-center justify-center font-[family-name:var(--font-pixel)] text-sm font-bold text-white shrink-0"
                         style={{ background: badgeBg }}
                       >
-                        {locked ? '🔒' : (i + 1)}
+                        {i + 1}
                       </div>
 
                       {/* Stars for completed levels */}
@@ -312,7 +306,7 @@ export function LevelSelect() {
                     {/* Level title */}
                     <h3
                       className="text-sm font-[family-name:var(--font-pixel)] font-bold leading-snug min-h-[2.4em]"
-                      style={{ marginBottom: '6px', color: locked ? '#94a3b8' : '#1e293b' }}
+                      style={{ marginBottom: '6px', color: '#1e293b' }}
                     >
                       {t(level.titleKey)}
                     </h3>
@@ -320,9 +314,9 @@ export function LevelSelect() {
                     {/* Optimal steps info */}
                     <span
                       className="text-xs font-[family-name:var(--font-ui)] font-semibold"
-                      style={{ color: locked ? '#cbd5e1' : '#94a3b8' }}
+                      style={{ color: '#94a3b8' }}
                     >
-                      {locked ? t('game.locked') : `${t('game.optimal')}: ${level.optimalSteps} ${t('game.stepsShort')}`}
+                      {`${t('game.optimal')}: ${level.optimalSteps} ${t('game.stepsShort')}`}
                     </span>
                   </div>
                 </motion.button>

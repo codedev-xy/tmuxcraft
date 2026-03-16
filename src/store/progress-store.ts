@@ -73,15 +73,7 @@ export const useProgressStore = create<ProgressState>()(
         return { completed, total }
       },
 
-      isChallengeUnlocked: (difficulty) => {
-        const chaptersCompleted = get().chaptersCompleted
-        switch (difficulty) {
-          case 'beginner': return chaptersCompleted.includes(1)
-          case 'intermediate': return chaptersCompleted.includes(2)
-          case 'advanced': return chaptersCompleted.includes(3)
-          default: return false
-        }
-      },
+      isChallengeUnlocked: () => true,
 
       getLeaderboard: (difficulty) => {
         return get().challengeRecords
@@ -89,18 +81,7 @@ export const useProgressStore = create<ProgressState>()(
           .sort((a, b) => a.timeSeconds - b.timeSeconds)
       },
 
-      isLevelUnlocked: (levelId) => {
-        const [chapterStr, levelStr] = levelId.split('-')
-        const chapter = parseInt(chapterStr)
-        const level = parseInt(levelStr)
-        // First level of first chapter is always unlocked
-        if (chapter === 1 && level === 1) return true
-        // First level of subsequent chapters requires previous chapter completion
-        if (level === 1) return get().chaptersCompleted.includes(chapter - 1)
-        // Other levels require the previous level in the same chapter to be completed
-        const prevLevelId = `${chapter}-${level - 1}`
-        return !!get().levelProgress[prevLevelId]?.completed
-      },
+      isLevelUnlocked: () => true,
 
       resetProgress: () => set({
         levelProgress: {},
