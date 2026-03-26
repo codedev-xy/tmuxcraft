@@ -488,20 +488,54 @@ export function GameScreen() {
           )}
           <button
             onClick={handleRetry}
-            className="text-xs font-[family-name:var(--font-ui)] px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 hover:bg-white/15"
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#94a3b8' }}
+            className="group text-xs font-[family-name:var(--font-ui)] font-medium px-4 py-2 rounded-xl cursor-pointer transition-all duration-200"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.1))',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#94a3b8',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.18))'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
+              e.currentTarget.style.color = '#e2e8f0'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.15)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.1))'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+              e.currentTarget.style.color = '#94a3b8'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.1)'
+            }}
           >
             🔄 {t('game.retry')}
           </button>
           <button
             onClick={handleHint}
             disabled={currentHintLevel >= 3 || isLevelComplete}
-            className="text-xs font-[family-name:var(--font-ui)] px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 disabled:opacity-30"
+            className="text-xs font-[family-name:var(--font-ui)] font-medium px-4 py-2 rounded-xl cursor-pointer transition-all duration-200 disabled:opacity-30"
             style={{
-              background: 'rgba(245,158,11,0.12)',
-              border: '1px solid rgba(245,158,11,0.25)',
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.18))',
+              border: '1px solid rgba(245,158,11,0.3)',
               color: '#fbbf24',
+              boxShadow: '0 1px 4px rgba(245,158,11,0.1)',
               cursor: currentHintLevel >= 3 || isLevelComplete ? 'default' : 'pointer',
+            }}
+            onMouseEnter={e => {
+              if (currentHintLevel < 3 && !isLevelComplete) {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.28))'
+                e.currentTarget.style.borderColor = 'rgba(245,158,11,0.45)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 3px 10px rgba(245,158,11,0.15)'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.18))'
+              e.currentTarget.style.borderColor = 'rgba(245,158,11,0.3)'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 1px 4px rgba(245,158,11,0.1)'
             }}
           >
             💡 {t('game.hint')} ({3 - currentHintLevel})

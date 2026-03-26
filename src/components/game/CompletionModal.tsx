@@ -188,23 +188,47 @@ export function CompletionModal({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              className="flex justify-center gap-2.5"
+              className="flex justify-center gap-3"
             >
               <button
                 onClick={onRetry}
-                className="font-[family-name:var(--font-ui)] px-6 py-2.5 text-[13px] font-medium bg-white border-[1.5px] border-slate-200 rounded-xl text-slate-500 cursor-pointer transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
+                className="font-[family-name:var(--font-ui)] px-7 py-3 text-[13px] font-semibold rounded-2xl cursor-pointer transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #ffffff, #f8fafc)',
+                  border: '1.5px solid #e2e8f0',
+                  color: '#64748b',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = '#cbd5e1'
+                  e.currentTarget.style.color = '#475569'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = '#e2e8f0'
+                  e.currentTarget.style.color = '#64748b'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'
+                }}
               >
-                {t('game.retry')}
+                🔄 {t('game.retry')}
               </button>
               <button
                 onClick={onNextLevel}
-                className="font-[family-name:var(--font-ui)] font-bold px-7 py-2.5 text-[13px] rounded-xl text-white border-none cursor-pointer transition-all duration-200 hover:-translate-y-px"
+                className="font-[family-name:var(--font-ui)] font-bold px-8 py-3 text-[13px] rounded-2xl text-white border-none cursor-pointer transition-all duration-200"
                 style={{
-                  background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
-                  boxShadow: '0 4px 14px rgba(14, 165, 233, 0.35)',
+                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                  boxShadow: '0 4px 16px rgba(14, 165, 233, 0.35), 0 1px 3px rgba(99, 102, 241, 0.2)',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(14, 165, 233, 0.45)' }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(14, 165, 233, 0.35)' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(14, 165, 233, 0.4), 0 2px 6px rgba(99, 102, 241, 0.25)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(14, 165, 233, 0.35), 0 1px 3px rgba(99, 102, 241, 0.2)'
+                }}
               >
                 {hasNextLevel ? t('game.nextLevel') : t('common.back')} {'\u2192'}
               </button>

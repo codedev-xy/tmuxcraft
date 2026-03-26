@@ -282,127 +282,173 @@ export function ChallengeScreen() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 flex items-center justify-center z-50"
             style={{
-              background: 'rgba(0, 0, 0, 0.3)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              background: 'rgba(15, 23, 42, 0.6)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
             }}
           >
+            {/* Confetti for success */}
+            {isComplete && Array.from({ length: 18 }).map((_, i) => (
+              <motion.div
+                key={`confetti-${i}`}
+                className="absolute"
+                initial={{ opacity: 1, x: 0, y: 0, scale: Math.random() * 0.5 + 0.5 }}
+                animate={{
+                  opacity: [1, 1, 0],
+                  x: (Math.random() - 0.5) * 500,
+                  y: Math.random() * -300 - 100,
+                  rotate: Math.random() * 720 - 360,
+                }}
+                transition={{
+                  duration: 1.8 + Math.random() * 0.8,
+                  delay: Math.random() * 0.4,
+                  ease: [0.2, 0.8, 0.4, 1],
+                }}
+                style={{
+                  width: `${Math.random() * 8 + 4}px`,
+                  height: `${Math.random() * 8 + 4}px`,
+                  borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                  background: ['#f59e0b', '#0ea5e9', '#ec4899', '#10b981', '#8b5cf6', '#f97316'][i % 6],
+                }}
+              />
+            ))}
+
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="text-center"
+              initial={{ scale: 0.6, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.1 }}
+              className="text-center relative w-[400px] max-w-[90vw] rounded-3xl overflow-hidden shadow-2xl"
               style={{
-                padding: '32px',
-                maxWidth: '400px',
-                width: '100%',
-                margin: '0 16px',
-                borderRadius: '20px',
-                background: '#ffffff',
-                border: isComplete
-                  ? '2px solid #22c55e'
-                  : '2px solid #ef4444',
-                boxShadow: isComplete
-                  ? '0 8px 48px rgba(34, 197, 94, 0.15), 0 2px 12px rgba(0,0,0,0.08)'
-                  : '0 8px 48px rgba(239, 68, 68, 0.15), 0 2px 12px rgba(0,0,0,0.08)',
+                padding: '36px 40px 32px',
+                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
               }}
             >
-              {/* Emoji header */}
-              <div className="text-5xl" style={{ marginBottom: '12px' }}>
-                {isComplete ? '\uD83C\uDF89' : '\uD83D\uDE14'}
-              </div>
-
-              <h2
-                className="font-[family-name:var(--font-pixel)] text-xl"
+              {/* Top accent bar */}
+              <div
+                className="absolute top-0 left-0 right-0 h-1"
                 style={{
-                  marginBottom: '16px',
-                  color: isComplete ? '#22c55e' : '#ef4444',
+                  background: isComplete
+                    ? 'linear-gradient(90deg, #10b981, #0ea5e9, #8b5cf6)'
+                    : 'linear-gradient(90deg, #ef4444, #f97316)',
+                }}
+              />
+
+              {/* Emoji + Title */}
+              <motion.div
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="text-5xl mb-3">
+                  {isComplete ? '\uD83C\uDF89' : '\u23F0'}
+                </div>
+                <h2
+                  className="font-[family-name:var(--font-pixel)] text-xl mb-1"
+                  style={{ color: isComplete ? '#059669' : '#dc2626' }}
+                >
+                  {isComplete ? t('challenge.completed') : t('challenge.timeUp')}
+                </h2>
+                <p className="font-[family-name:var(--font-ui)] text-xs text-slate-400 mb-6">
+                  {goal.description}
+                </p>
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="flex justify-center mb-7 rounded-2xl overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+                  border: '1px solid #e2e8f0',
                 }}
               >
-                {isComplete ? t('challenge.completed') : t('challenge.timeUp')}
-              </h2>
-
-              {isComplete && (
-                <div className="flex justify-center" style={{ gap: '12px', marginBottom: '24px' }}>
+                <div className="flex-1 text-center" style={{ padding: '16px 12px' }}>
+                  <span className="text-lg block mb-1">{isComplete ? '\u23F1\uFE0F' : '\u26A0\uFE0F'}</span>
                   <div
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      flex: 1,
-                      background: '#f0f4ff',
-                      border: '1px solid #e2e8f0',
-                    }}
+                    className="font-[family-name:var(--font-pixel)] text-xl font-bold leading-none"
+                    style={{ color: isComplete ? '#0ea5e9' : '#ef4444' }}
                   >
-                    <p
-                      className="font-[family-name:var(--font-ui)] text-xs"
-                      style={{ marginBottom: '4px', color: '#94a3b8' }}
-                    >
-                      {t('challenge.yourTime')}
-                    </p>
-                    <p
-                      className="font-[family-name:var(--font-pixel)] text-lg"
-                      style={{ color: '#0ea5e9' }}
-                    >
-                      {TIME_LIMIT - timeLeft}s
-                    </p>
+                    {TIME_LIMIT - timeLeft}s
                   </div>
-                  <div
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      flex: 1,
-                      background: '#f0f4ff',
-                      border: '1px solid #e2e8f0',
-                    }}
-                  >
-                    <p
-                      className="font-[family-name:var(--font-ui)] text-xs"
-                      style={{ marginBottom: '4px', color: '#94a3b8' }}
-                    >
-                      {t('challenge.commandsUsed')}
-                    </p>
-                    <p
-                      className="font-[family-name:var(--font-pixel)] text-lg"
-                      style={{ color: '#0ea5e9' }}
-                    >
-                      {commandCount}
-                    </p>
+                  <div className="font-[family-name:var(--font-ui)] text-[10px] text-slate-400 mt-1.5 tracking-wide">
+                    {t('challenge.yourTime')}
                   </div>
                 </div>
-              )}
+                <div className="w-px bg-slate-200 my-3" />
+                <div className="flex-1 text-center" style={{ padding: '16px 12px' }}>
+                  <span className="text-lg block mb-1">{'\u2328\uFE0F'}</span>
+                  <div className="font-[family-name:var(--font-pixel)] text-xl font-bold text-sky-500 leading-none">
+                    {commandCount}
+                  </div>
+                  <div className="font-[family-name:var(--font-ui)] text-[10px] text-slate-400 mt-1.5 tracking-wide">
+                    {t('challenge.commandsUsed')}
+                  </div>
+                </div>
+              </motion.div>
 
-              <div className="flex justify-center" style={{ gap: '12px' }}>
+              {/* Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="flex justify-center gap-3"
+              >
                 <button
                   onClick={() => setScreen('challenge-select')}
-                  className="font-[family-name:var(--font-ui)] font-semibold text-sm"
+                  className="font-[family-name:var(--font-ui)] px-6 py-3 text-[13px] font-semibold rounded-2xl cursor-pointer transition-all duration-200"
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '12px',
-                    background: '#f0f4ff',
+                    background: 'linear-gradient(135deg, #ffffff, #f8fafc)',
+                    border: '1.5px solid #e2e8f0',
                     color: '#64748b',
-                    border: '1px solid #e2e8f0',
-                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = '#cbd5e1'
+                    e.currentTarget.style.color = '#475569'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = '#e2e8f0'
+                    e.currentTarget.style.color = '#64748b'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'
                   }}
                 >
                   {t('challenge.backToMenu')}
                 </button>
                 <button
                   onClick={handleRetry}
-                  className="font-[family-name:var(--font-ui)] font-semibold text-sm text-white"
+                  className="font-[family-name:var(--font-ui)] font-bold px-7 py-3 text-[13px] rounded-2xl text-white border-none cursor-pointer transition-all duration-200"
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '12px',
-                    background: '#0ea5e9',
-                    border: '1px solid #0ea5e9',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(14, 165, 233, 0.3)',
+                    background: isComplete
+                      ? 'linear-gradient(135deg, #10b981, #0ea5e9)'
+                      : 'linear-gradient(135deg, #f97316, #ef4444)',
+                    boxShadow: isComplete
+                      ? '0 4px 16px rgba(16, 185, 129, 0.35), 0 1px 3px rgba(14, 165, 233, 0.2)'
+                      : '0 4px 16px rgba(239, 68, 68, 0.35), 0 1px 3px rgba(249, 115, 22, 0.2)',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = isComplete
+                      ? '0 8px 24px rgba(16, 185, 129, 0.4), 0 2px 6px rgba(14, 165, 233, 0.25)'
+                      : '0 8px 24px rgba(239, 68, 68, 0.4), 0 2px 6px rgba(249, 115, 22, 0.25)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = isComplete
+                      ? '0 4px 16px rgba(16, 185, 129, 0.35), 0 1px 3px rgba(14, 165, 233, 0.2)'
+                      : '0 4px 16px rgba(239, 68, 68, 0.35), 0 1px 3px rgba(249, 115, 22, 0.2)'
                   }}
                 >
-                  {t('challenge.tryAgain')}
+                  🔄 {t('challenge.tryAgain')}
                 </button>
-              </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         )}
