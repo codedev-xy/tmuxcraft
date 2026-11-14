@@ -298,7 +298,7 @@ describe('TmuxEngine', () => {
       engine.execute(cmd('split-horizontal'))
       engine.execute(cmd('select-layout', { layout: 'even-vertical' }))
       const win = engine.getActiveWindow()!
-      expect(win.layoutTree.direction).toBe('vertical')
+      expect(win.layoutTree.direction).toBe('horizontal')
     })
   })
 

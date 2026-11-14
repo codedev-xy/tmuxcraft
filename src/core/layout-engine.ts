@@ -27,35 +27,42 @@ export function calculateLayout(tree: LayoutNode, bounds: Rect): PaneLayout[] {
   return []
 }
 
-export function splitPane(tree: LayoutNode, paneId: string, direction: 'horizontal' | 'vertical', newPaneId?: string): { tree: LayoutNode; newPaneId: string } {
-  const id = newPaneId ?? `pane-${Date.now()}`
-  const newPane: Pane = createPane(id)
-  const newTree = splitPaneInTree(tree, paneId, direction, newPane)
-  return { tree: newTree, newPaneId: id }
+export type SplitDirection = 'horizontal' | 'vertical'
+export type ResizeDirection = 'left' | 'right' | 'up' | 'down'
+
+/** Preset layouts in the order `next-layout` cycles through them. */
+export const PRESET_LAYOUTS: readonly PresetLayout[] = ['even-horizontal', 'even-vertical', 'main-horizontal', 'main-vertical', 'tiled']
+
+const MIN_RATIO = 0.1
+const MAX_RATIO = 0.9
+
+/** Keeps a split ratio in [0.1, 0.9], rounded to 3 decimals so repeated steps do not drift. */
+export function clampRatio(ratio: number): number {
+  return Math.round(Math.max(MIN_RATIO, Math.min(MAX_RATIO, ratio)) * 1000) / 1000
 }
 
-function splitPaneInTree(node: LayoutNode, paneId: string, direction: 'horizontal' | 'vertical', newPane: Pane): LayoutNode {
-  if (node.type === 'pane' && node.pane?.id === paneId) {
-    return {
-      type: 'split',
-      direction,
-      ratio: 0.5,
-      children: [
-        { type: 'pane', pane: { ...node.pane } },
-        { type: 'pane', pane: newPane },
-      ],
-    }
-  }
-  if (node.type === 'split' && node.children) {
-    return {
-      ...node,
-      children: [
-        splitPaneInTree(node.children[0], paneId, direction, newPane),
-        splitPaneInTree(node.children[1], paneId, direction, newPane),
-      ],
-    }
-  }
-  return node
+export interface SplitOptions {
+  /** Put the new pane before (left of / above) the target instead of after it. */
+  readonly before?: boolean
+  /** The new pane's share of the split, kept in [0.1, 0.9]; 0.5 when absent. */
+  readonly size?: number
+}
+
+/** Splits the leaf holding `paneId` in two, keeping that pane and adding `newPane` beside it. */
+export function splitPane(tree: LayoutNode, paneId: string, direction: SplitDirection, newPane: Pane, options: SplitOptions = {}): LayoutNode {
+  const size = options.size ?? 0.5
+  return mapLeaves(tree, leaf => {
+    if (leaf.pane?.id !== paneId) return leaf
+    const added: LayoutNode = { type: 'pane', pane: newPane }
+    const children: [LayoutNode, LayoutNode] = options.before ? [added, leaf] : [leaf, added]
+    return { type: 'split', direction, ratio: clampRatio(options.before ? size : 1 - size), children }
+  })
+}
+
+function mapLeaves(node: LayoutNode, change: (leaf: LayoutNode) => LayoutNode): LayoutNode {
+  if (node.type === 'pane') return change(node)
+  if (!node.children) return node
+  return { ...node, children: [mapLeaves(node.children[0], change), mapLeaves(node.children[1], change)] }
 }
 
 export function closePane(tree: LayoutNode, paneId: string): LayoutNode | null {
@@ -74,143 +81,102 @@ export function closePane(tree: LayoutNode, paneId: string): LayoutNode | null {
   return tree
 }
 
-export function resizePane(tree: LayoutNode, paneId: string, direction: 'left' | 'right' | 'up' | 'down', delta: number): LayoutNode {
-  return resizePaneInTree(tree, paneId, direction, delta / 100)
+/** A split on the way from the root to a pane, and which of its children holds the pane. */
+interface PathStep {
+  readonly node: LayoutNode
+  readonly index: 0 | 1
 }
 
-function resizePaneInTree(node: LayoutNode, paneId: string, direction: string, delta: number): LayoutNode {
-  if (node.type !== 'split' || !node.children) return node
-  const [first, second] = node.children
-  const firstContains = containsPane(first, paneId)
-  const secondContains = containsPane(second, paneId)
-
-  if (firstContains && secondContains) return node
-  if (!firstContains && !secondContains) return node
-
-  const isHorizontalResize = direction === 'left' || direction === 'right'
-  const isVerticalResize = direction === 'up' || direction === 'down'
-  const splitIsVertical = node.direction === 'vertical'
-  const splitIsHorizontal = node.direction === 'horizontal'
-
-  if ((isHorizontalResize && splitIsVertical) || (isVerticalResize && splitIsHorizontal)) {
-    const currentRatio = node.ratio ?? 0.5
-    let adjustment = delta
-    if ((direction === 'left' && firstContains) || (direction === 'right' && secondContains) ||
-        (direction === 'up' && firstContains) || (direction === 'down' && secondContains)) {
-      adjustment = -delta
-    }
-    const newRatio = Math.max(0.1, Math.min(0.9, currentRatio + adjustment))
-    return { ...node, ratio: newRatio }
-  }
-
-  return {
-    ...node,
-    children: [
-      resizePaneInTree(first, paneId, direction, delta),
-      resizePaneInTree(second, paneId, direction, delta),
-    ],
-  }
-}
-
-export function swapPanes(tree: LayoutNode, paneId1: string, paneId2: string): LayoutNode {
-  const pane1 = findPaneData(tree, paneId1)
-  const pane2 = findPaneData(tree, paneId2)
-  if (!pane1 || !pane2) return tree
-  let result = replacePaneData(tree, paneId1, pane2)
-  result = replacePaneData(result, paneId2, pane1)
-  return result
-}
-
-function findPaneData(tree: LayoutNode, paneId: string): Pane | null {
-  if (tree.type === 'pane' && tree.pane?.id === paneId) return { ...tree.pane }
-  if (tree.children) {
-    for (const child of tree.children) {
-      const found = findPaneData(child, paneId)
-      if (found) return found
-    }
+function pathTo(node: LayoutNode, paneId: string): PathStep[] | null {
+  if (node.type === 'pane') return node.pane?.id === paneId ? [] : null
+  if (!node.children) return null
+  for (const index of [0, 1] as const) {
+    const rest = pathTo(node.children[index], paneId)
+    if (rest) return [{ node, index }, ...rest]
   }
   return null
 }
 
-function replacePaneData(tree: LayoutNode, paneId: string, newPane: Pane): LayoutNode {
-  if (tree.type === 'pane' && tree.pane?.id === paneId) {
-    return { ...tree, pane: { ...newPane, id: paneId } }
-  }
-  if (tree.children) {
-    return {
-      ...tree,
-      children: [
-        replacePaneData(tree.children[0], paneId, newPane),
-        replacePaneData(tree.children[1], paneId, newPane),
-      ],
-    }
-  }
-  return tree
+function updateAt(node: LayoutNode, path: readonly (0 | 1)[], change: (node: LayoutNode) => LayoutNode): LayoutNode {
+  if (path.length === 0 || !node.children) return change(node)
+  const [index, ...rest] = path
+  const children: [LayoutNode, LayoutNode] = [...node.children]
+  children[index] = updateAt(children[index], rest, change)
+  return { ...node, children }
 }
 
-export function applyPresetLayout(paneIds: string[], layoutType: PresetLayout): LayoutNode {
-  const panes = paneIds.map(id => ({
-    type: 'pane' as const,
-    pane: createPane(id),
-  }))
+/**
+ * Resizes like tmux: left / right move the pane's right border if it has one, otherwise its left border,
+ * and up / down do the same with its bottom / top border. One cell is 1% of the split being moved.
+ */
+export function resizePane(tree: LayoutNode, paneId: string, direction: ResizeDirection, cells: number): LayoutNode {
+  const path = pathTo(tree, paneId)
+  if (!path) return tree
+  const splitDirection: SplitDirection = direction === 'left' || direction === 'right' ? 'vertical' : 'horizontal'
+  const depths = path.map((_, depth) => depth).reverse()
+  const nearest = (index: 0 | 1) => depths.find(depth => path[depth].node.direction === splitDirection && path[depth].index === index)
+  const depth = nearest(0) ?? nearest(1)
+  if (depth === undefined) return tree
+  const delta = (direction === 'right' || direction === 'down' ? cells : -cells) / 100
+  const route = path.slice(0, depth).map(step => step.index)
+  return updateAt(tree, route, node => ({ ...node, ratio: clampRatio((node.ratio ?? 0.5) + delta) }))
+}
 
-  if (panes.length === 0) return { type: 'pane', pane: createPane('empty') }
-  if (panes.length === 1) return panes[0]
+/** Exchanges two panes of a tree, moving the whole `Pane` objects. */
+export function swapPanes(tree: LayoutNode, paneId1: string, paneId2: string): LayoutNode {
+  const pane1 = findPane(tree, paneId1)?.pane
+  const pane2 = findPane(tree, paneId2)?.pane
+  if (!pane1 || !pane2) return tree
+  return mapLeaves(tree, leaf => {
+    if (leaf.pane?.id === paneId1) return { ...leaf, pane: pane2 }
+    if (leaf.pane?.id === paneId2) return { ...leaf, pane: pane1 }
+    return leaf
+  })
+}
 
+/** Rebuilds a window's tree in a preset layout; the first pane is the main pane. Pane objects are kept as they are. */
+export function applyPresetLayout(panes: readonly Pane[], layoutType: PresetLayout): LayoutNode {
+  const leaves: LayoutNode[] = panes.map(pane => ({ type: 'pane', pane }))
+  if (leaves.length === 0) return { type: 'pane', pane: createPane('empty') }
+  if (leaves.length === 1) return leaves[0]
+  const [main, ...rest] = leaves
   switch (layoutType) {
     case 'even-horizontal':
-      return buildEvenSplit(panes, 'horizontal')
+      return buildEvenSplit(leaves, 'vertical')
     case 'even-vertical':
-      return buildEvenSplit(panes, 'vertical')
-    case 'main-horizontal': {
-      if (panes.length === 1) return panes[0]
-      const rest = panes.slice(1)
-      return {
-        type: 'split', direction: 'horizontal', ratio: 0.6,
-        children: [panes[0], rest.length === 1 ? rest[0] : buildEvenSplit(rest, 'vertical')],
-      }
-    }
-    case 'main-vertical': {
-      if (panes.length === 1) return panes[0]
-      const rest = panes.slice(1)
-      return {
-        type: 'split', direction: 'vertical', ratio: 0.6,
-        children: [panes[0], rest.length === 1 ? rest[0] : buildEvenSplit(rest, 'horizontal')],
-      }
-    }
+      return buildEvenSplit(leaves, 'horizontal')
+    case 'main-horizontal':
+      return { type: 'split', direction: 'horizontal', ratio: 0.6, children: [main, buildEvenSplit(rest, 'vertical')] }
+    case 'main-vertical':
+      return { type: 'split', direction: 'vertical', ratio: 0.6, children: [main, buildEvenSplit(rest, 'horizontal')] }
     case 'tiled':
-      return buildTiled(panes)
-    default:
-      return buildEvenSplit(panes, 'horizontal')
+      return buildTiled(leaves)
   }
 }
 
-function buildEvenSplit(panes: LayoutNode[], direction: 'horizontal' | 'vertical'): LayoutNode {
-  if (panes.length === 1) return panes[0]
-  if (panes.length === 2) {
-    return { type: 'split', direction, ratio: 0.5, children: [panes[0], panes[1]] }
-  }
-  const mid = Math.ceil(panes.length / 2)
-  const ratio = mid / panes.length
+/** Splits nodes into equal shares along one direction. */
+function buildEvenSplit(nodes: readonly LayoutNode[], direction: SplitDirection): LayoutNode {
+  if (nodes.length === 1) return nodes[0]
+  const mid = Math.ceil(nodes.length / 2)
   return {
-    type: 'split', direction, ratio,
-    children: [
-      buildEvenSplit(panes.slice(0, mid), direction),
-      buildEvenSplit(panes.slice(mid), direction),
-    ],
+    type: 'split', direction, ratio: mid / nodes.length,
+    children: [buildEvenSplit(nodes.slice(0, mid), direction), buildEvenSplit(nodes.slice(mid), direction)],
   }
 }
 
-function buildTiled(panes: LayoutNode[]): LayoutNode {
-  if (panes.length <= 2) return buildEvenSplit(panes, 'horizontal')
-  const mid = Math.ceil(panes.length / 2)
-  return {
-    type: 'split', direction: 'horizontal', ratio: 0.5,
-    children: [
-      buildEvenSplit(panes.slice(0, mid), 'vertical'),
-      buildEvenSplit(panes.slice(mid), 'vertical'),
-    ],
+/** tmux's tiled grid: grow rows, then columns, until the panes fit; rows fill left to right. */
+function buildTiled(leaves: readonly LayoutNode[]): LayoutNode {
+  let rows = 1
+  let cols = 1
+  while (rows * cols < leaves.length) {
+    rows++
+    if (rows * cols < leaves.length) cols++
   }
+  const rowNodes: LayoutNode[] = []
+  for (let start = 0; start < leaves.length; start += cols) {
+    rowNodes.push(buildEvenSplit(leaves.slice(start, start + cols), 'vertical'))
+  }
+  return buildEvenSplit(rowNodes, 'horizontal')
 }
 
 export function compareLayouts(actual: LayoutNode, target: LayoutNode): number {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  findSession, getActivePane, getActiveSession, getActiveWindow, locatePane, locateWindow, windowPanes,
+  findPane, findSession, shellPaneId, getActivePane, getActiveSession, getActiveWindow, locatePane, locateWindow, windowPanes,
 } from '../selectors'
 import { emptyState } from '../state'
 import { twoSessionState } from './fixtures'
@@ -48,5 +48,26 @@ describe('lookups', () => {
   it('lists the panes of a window in layout order', () => {
     const editor = twoSessionState().sessions[0].windows[0]
     expect(windowPanes(editor).map(pane => pane.id)).toEqual(['p1', 'p2'])
+  })
+})
+
+describe('findPane', () => {
+  it('finds a pane in any window, and the terminal outside tmux', () => {
+    const state = twoSessionState()
+    expect(findPane(state, 'p4')?.id).toBe('p4')
+    expect(findPane(state, state.outer.id)).toBe(state.outer)
+    expect(findPane(state, 'p9')).toBeNull()
+  })
+})
+
+describe('shellPaneId', () => {
+  it('is the active pane while attached', () => {
+    expect(shellPaneId(twoSessionState())).toBe('p1')
+  })
+
+  it('is the terminal outside tmux while detached or with no sessions', () => {
+    const state = twoSessionState()
+    expect(shellPaneId({ ...state, isDetached: true })).toBe(state.outer.id)
+    expect(shellPaneId(emptyState())).toBe(emptyState().outer.id)
   })
 })

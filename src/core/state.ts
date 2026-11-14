@@ -4,6 +4,8 @@ import { DEFAULT_PREFIX_BINDINGS } from './keymap'
 export const DEFAULT_SESSION_NAME = '0'
 export const DEFAULT_WINDOW_NAME = 'bash'
 export const HOME = '~'
+/** ID of the pane that stands for the terminal outside tmux. */
+export const OUTER_PANE_ID = 'outer'
 
 export function createPane(id: string, content: readonly string[] = []): Pane {
   return { id, content: [...content], input: '', cwd: HOME, cursorPosition: { row: 0, col: 0 }, isZoomed: false }
@@ -43,6 +45,9 @@ export function emptyState(): TmuxState {
     files: {},
     log: [],
     nextId: 0,
+    prefixPending: false,
+    outer: createPane(OUTER_PANE_ID),
+    editing: null,
     setOptions: {},
     sourcedFiles: [],
   }

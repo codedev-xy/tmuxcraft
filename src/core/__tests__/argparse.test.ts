@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseArgs } from '../argparse'
+import { flagValue, hasFlag, parseArgs } from '../argparse'
 import type { FlagSpec } from '../argparse'
 
 const SPEC: FlagSpec = { d: 'bool', h: 'bool', v: 'bool', s: 'value', t: 'value', n: 'value' }
@@ -57,5 +57,26 @@ describe('parseArgs', () => {
 
   it('reports a value flag with no value', () => {
     expect(errorOf(['-d', '-s'])).toEqual({ code: 'parse.missingArg', params: { flag: '-s' } })
+  })
+})
+
+describe('flagValue and hasFlag', () => {
+  const args = parse(['-d', '-t', 'dev:1', 'rest'])
+
+  it('reads the value of a value flag', () => {
+    expect(flagValue(args, 't')).toBe('dev:1')
+  })
+
+  it('gives undefined for a flag that was not used, a boolean flag, or an inherited key', () => {
+    expect(flagValue(args, 's')).toBeUndefined()
+    expect(flagValue(args, 'd')).toBeUndefined()
+    expect(flagValue(args, 'constructor')).toBeUndefined()
+  })
+
+  it('tells whether a flag was used', () => {
+    expect(hasFlag(args, 'd')).toBe(true)
+    expect(hasFlag(args, 't')).toBe(true)
+    expect(hasFlag(args, 'h')).toBe(false)
+    expect(hasFlag(args, 'constructor')).toBe(false)
   })
 })

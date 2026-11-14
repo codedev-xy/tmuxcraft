@@ -210,7 +210,8 @@ export class TmuxEngine {
   private splitPane(direction: 'horizontal' | 'vertical'): void {
     const win = this.getActiveWindow()
     if (!win) return
-    const { tree, newPaneId } = Layout.splitPane(win.layoutTree, win.activePaneId, direction, this.nextId('pane'))
+    const newPaneId = this.nextId('pane')
+    const tree = Layout.splitPane(win.layoutTree, win.activePaneId, direction, createPane(newPaneId))
     this.updateActiveWindow({ layoutTree: tree, activePaneId: newPaneId })
     this.emit({ type: 'pane-split' })
   }
@@ -330,7 +331,7 @@ export class TmuxEngine {
     if (!win) return
 
     const firstPane = sourcePanes[0]
-    const { tree: newTree } = Layout.splitPane(win.layoutTree, win.activePaneId, 'horizontal', this.nextId('pane'))
+    const newTree = Layout.splitPane(win.layoutTree, win.activePaneId, 'horizontal', createPane(this.nextId('pane')))
     const allNew = Layout.getAllPanes(newTree)
     const addedPane = allNew.find(p => !Layout.findPane(win.layoutTree, p.id))
 
@@ -372,7 +373,7 @@ export class TmuxEngine {
     const allPanes = Layout.getAllPanes(win.layoutTree)
     if (allPanes.length <= 1) return
     this.currentLayoutIndex = (this.currentLayoutIndex + 1) % PRESET_LAYOUTS.length
-    const newTree = Layout.applyPresetLayout(allPanes.map(p => p.id), PRESET_LAYOUTS[this.currentLayoutIndex])
+    const newTree = Layout.applyPresetLayout(allPanes, PRESET_LAYOUTS[this.currentLayoutIndex])
     this.updateActiveWindow({ layoutTree: this.restorePaneData(newTree, allPanes) })
   }
 
@@ -381,7 +382,7 @@ export class TmuxEngine {
     if (!win) return
     const allPanes = Layout.getAllPanes(win.layoutTree)
     if (allPanes.length <= 1) return
-    const newTree = Layout.applyPresetLayout(allPanes.map(p => p.id), layout)
+    const newTree = Layout.applyPresetLayout(allPanes, layout)
     this.updateActiveWindow({ layoutTree: this.restorePaneData(newTree, allPanes) })
   }
 

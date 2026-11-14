@@ -37,15 +37,34 @@ P1 定下的行为（P2 起照此实现）：
 
 ## P2 命令表与 executeLine
 
-- [ ] `executeLine(state, line, ctx) => { state, ok, output, errors }`
-- [ ] 会话 / 窗口 / 面板 / 布局命令
-- [ ] 选项 / 按键绑定 / 状态栏格式
-- [ ] shell 内置命令、脚本执行、虚拟文件、复制模式
-- [ ] 布局修复：even-horizontal / even-vertical 对调、resize 方向
-- [ ] 崩溃修复：`:join-pane` 无 `-s`、`:select-window` 无 `-t`；`:next` 映射
-- [ ] `reduceKey` 纯函数
-- [ ] 纠错提示（Levenshtein）真正返回
-- [ ] 现有引擎和解析器测试移植为按行执行的测试，数量不减
+- [x] `executeLine(state, line, ctx, engine) => { state, ok, output, errors }`
+- [x] 会话 / 窗口 / 面板 / 布局命令
+- [x] 选项 / 按键绑定 / 状态栏格式
+- [x] shell 内置命令、脚本执行、虚拟文件、复制模式
+- [x] 布局修复：even-horizontal / even-vertical 对调、resize 方向
+- [x] 崩溃修复：`:join-pane` 无 `-s`（报缺少参数）、`:select-window` 无 `-t`（无操作）；`:next` 映射到 `next-window`
+- [x] `reduceKey` 纯函数（另有 `clickPane` / `dragBorder` 处理鼠标）
+- [x] 纠错提示（Levenshtein）真正返回（tmux 命令和 shell 命令都有）
+- [x] 现有引擎和解析器测试移植为按行执行的测试，数量不减（旧 49 + 64 = 113，新 49 + 65 = 114）
+
+P2 结果：lint 0 错误、`tsc -b` 通过、`npm run build` 通过、测试 294 → 1003 全过（38 个文件）。旧引擎和旧测试仍在，P3 切换后删除。
+
+P2 定下的行为（P3 / P4 照此使用）：
+- UI 入口：`submitLine`（命令框）、`reduceKey`（按键）、`clickPane` / `dragBorder`（鼠标）、`submitPrompt` / `cancelPrompt`、`saveFile` / `openEditor` / `closeEditor`、`renderStatus`。引擎实例是 `src/core/engine.ts` 的 `ENGINE`。
+- 目标里的裸数字（`-t 1`、`-s 1`）先当作当前窗口的面板序号，和真实 tmux 一致；指窗口要写 `:1` 或窗口名。关卡提示里的 `join-pane` 要按这个写。
+- 在会话内从 shell 输入 `tmux new -s x`（不带 `-d`）报嵌套错误；从 `:` 提示符输入则创建并切换。
+- 失败的命令不记入 `log`；shell 行在它触发的命令之后记一条 `shell`。
+- shell 只支持 `;` 和 `&&`，管道和重定向报“模拟器暂不支持”。
+- 同步开启时，命令框输入的 shell 行广播到全部面板，`tmux …` 行除外。
+
+P2 留下、未处理的小重复（不影响行为，P3 顺手收）：
+- `showWindow`（`pane-shared.ts`）和 `selectWindowAt`（`window-shared.ts`）功能重复。
+- `deepFreeze` 在三个测试文件里各有一份。
+- 按键归一化 + 保留键检查在 `options.ts` 和 `keys.ts` 各有一份。
+
+P2 造成的临时状态（P3 / P4 解决）：
+- 预设布局方向修正后，2-2 现有校验器是错的，P4 改写。
+- 旧引擎的 resize 现在每格移动 1%。
 
 ## P3 切换到新引擎
 

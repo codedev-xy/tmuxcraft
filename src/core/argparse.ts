@@ -53,3 +53,13 @@ export function parseArgs(words: readonly string[], spec: FlagSpec): Result<Pars
   }
   return ok({ flags, positional: words.slice(i) })
 }
+
+/** The value given to a value flag, or undefined when the flag was not used. */
+export function flagValue(args: ParsedArgs, flag: string): string | undefined {
+  const value = Object.hasOwn(args.flags, flag) ? args.flags[flag] : undefined
+  return typeof value === 'string' ? value : undefined
+}
+
+export function hasFlag(args: ParsedArgs, flag: string): boolean {
+  return Object.hasOwn(args.flags, flag)
+}

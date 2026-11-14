@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizePath, readFile, saveFile } from '../files'
+import { closeEditor, normalizePath, openEditor, readFile, saveFile } from '../files'
 import { emptyState } from '../state'
 
 describe('normalizePath', () => {
@@ -50,5 +50,15 @@ describe('saveFile / readFile', () => {
 
   it('does not treat object built-ins as files', () => {
     expect(readFile(emptyState(), 'constructor').ok).toBe(false)
+  })
+})
+
+describe('openEditor / closeEditor', () => {
+  it('opens the editor on the normalized path and closes it', () => {
+    const state = Object.freeze(emptyState())
+    const open = openEditor(state, './dev.sh')
+    expect(open.editing).toBe('~/dev.sh')
+    expect(closeEditor(open).editing).toBeNull()
+    expect(state.editing).toBeNull()
   })
 })

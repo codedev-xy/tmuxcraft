@@ -64,3 +64,15 @@ export function locatePane(state: TmuxState, paneId: string): PaneLocation | nul
   }
   return null
 }
+
+/** A pane by ID, including the terminal outside tmux. */
+export function findPane(state: TmuxState, paneId: string): Pane | null {
+  if (paneId === state.outer.id) return state.outer
+  return locatePane(state, paneId)?.pane ?? null
+}
+
+/** The pane a typed line runs in: the active pane, or the terminal outside tmux while detached. */
+export function shellPaneId(state: TmuxState): string {
+  const active = state.isDetached ? null : getActivePane(state)
+  return active?.id ?? state.outer.id
+}

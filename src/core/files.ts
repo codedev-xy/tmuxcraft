@@ -34,3 +34,11 @@ export function saveFile(state: TmuxState, path: string, text: string): TmuxStat
   const saved = { ...state, files: { ...state.files, [normalized]: text } }
   return appendLog(saved, { name: 'save-file', origin: 'typed', detail: { path: normalized } })
 }
+
+export function openEditor(state: TmuxState, path: string): TmuxState {
+  return { ...state, editing: normalizePath(path) }
+}
+
+export function closeEditor(state: TmuxState): TmuxState {
+  return { ...state, editing: null }
+}

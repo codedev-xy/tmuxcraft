@@ -17,6 +17,12 @@ export interface TmuxState {
   log: readonly LogEntry[]
   /** Monotonic counter behind generated session / window / pane IDs; never reused after a kill. */
   nextId: number
+  /** True after the prefix key, until the next key picks a binding from the prefix table. */
+  prefixPending: boolean
+  /** The terminal outside tmux: what the player sees and types into while detached. */
+  outer: Pane
+  /** Path of the file open in the editor (`vim ~/.tmux.conf`), null when the editor is closed. */
+  editing: string | null
   /** @deprecated Legacy engine only; replaced by `options`. */
   setOptions: Record<string, string>
   /** @deprecated Legacy engine only; replaced by `log`. */
@@ -49,7 +55,7 @@ export type Origin = 'typed' | 'key' | 'mouse' | 'config' | 'script'
 
 export interface LogEntry {
   readonly seq: number
-  /** Canonical command name (`split-window`), or `save-file` for an editor save. */
+  /** Canonical tmux command name (`split-window`), `shell` for a shell line that ran in a pane, or `save-file` for an editor save. */
   readonly name: string
   readonly origin: Origin
   /** The key that fired the binding when `origin` is `key`. */

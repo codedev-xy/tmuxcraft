@@ -85,3 +85,23 @@ describe('quoteWords', () => {
     expect(quoteWords(['split-window', '-h', '-t', 'dev:editor.1'])).toBe('split-window -h -t dev:editor.1')
   })
 })
+
+describe('quoted words', () => {
+  function quotedFlags(line: string): boolean[] {
+    const result = tokenize(line)
+    if (!result.ok) throw new Error(`tokenize failed: ${result.error.code}`)
+    return result.value.map(token => token.quoted)
+  }
+
+  it('marks a word with a quoted or escaped part', () => {
+    expect(quotedFlags(String.raw`bind '|' "a b" \| x'y'z`)).toEqual([false, true, true, true, true])
+  })
+
+  it('leaves bare words and separators unmarked', () => {
+    expect(quotedFlags('bind | split-window ; next')).toEqual([false, false, false, false, false])
+  })
+
+  it('does not carry the mark over to the next word', () => {
+    expect(quotedFlags(`'a' b;'c' d`)).toEqual([true, false, false, true, false])
+  })
+})
