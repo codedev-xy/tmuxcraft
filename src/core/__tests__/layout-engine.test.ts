@@ -14,9 +14,10 @@ import {
   getAdjacentPane,
 } from '../layout-engine'
 import type { LayoutNode, Rect } from '../types'
+import { paneNode } from '../state'
 
 function makePaneNode(id: string, content: string[] = []): LayoutNode {
-  return { type: 'pane', pane: { id, content, cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' } }
+  return paneNode(id, content)
 }
 
 function makeSplit(dir: 'horizontal' | 'vertical', a: LayoutNode, b: LayoutNode, ratio = 0.5): LayoutNode {

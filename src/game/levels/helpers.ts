@@ -1,27 +1,22 @@
-import type { TmuxState, Session, Window, Pane, LayoutNode } from '@/core/types'
+import type { TmuxState, Session, Window, LayoutNode } from '@/core/types'
+import { createSession, createWindow, emptyState, nextIdAfter, paneNode, splitNode } from '@/core/state'
 
-export function createPane(id: string, content: string[] = []): Pane {
-  return { id, content, cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' }
-}
-
-export function paneNode(id: string, content: string[] = []): LayoutNode {
-  return { type: 'pane', pane: createPane(id, content) }
-}
+export { createPane, paneNode } from '@/core/state'
 
 export function split(direction: 'horizontal' | 'vertical', child1: LayoutNode, child2: LayoutNode, ratio = 0.5): LayoutNode {
-  return { type: 'split', direction, ratio, children: [child1, child2] }
+  return splitNode(direction, child1, child2, ratio)
 }
 
 export function makeWindow(id: string, name: string, layoutTree: LayoutNode, activePaneId: string): Window {
-  return { id, name, layoutTree, activePaneId, synchronizePanes: false }
+  return createWindow(id, name, layoutTree, activePaneId)
 }
 
 export function makeSession(id: string, name: string, windows: Window[], activeWindowIndex = 0): Session {
-  return { id, name, windows, activeWindowIndex }
+  return createSession(id, name, windows, activeWindowIndex)
 }
 
 export function makeState(sessions: Session[], activeSessionId: string, detached = false): TmuxState {
-  return { sessions, activeSessionId, clipboard: '', isDetached: detached, setOptions: {}, sourcedFiles: [] }
+  return { ...emptyState(), sessions, activeSessionId, isDetached: detached, nextId: nextIdAfter(sessions) }
 }
 
 export function singlePaneState(sessionName = '0', windowName = 'bash'): TmuxState {

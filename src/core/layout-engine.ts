@@ -1,4 +1,5 @@
 import type { LayoutNode, Pane, PaneLayout, Rect, PresetLayout } from './types'
+import { createPane } from './state'
 
 export function calculateLayout(tree: LayoutNode, bounds: Rect): PaneLayout[] {
   if (tree.type === 'pane' && tree.pane) {
@@ -28,7 +29,7 @@ export function calculateLayout(tree: LayoutNode, bounds: Rect): PaneLayout[] {
 
 export function splitPane(tree: LayoutNode, paneId: string, direction: 'horizontal' | 'vertical', newPaneId?: string): { tree: LayoutNode; newPaneId: string } {
   const id = newPaneId ?? `pane-${Date.now()}`
-  const newPane: Pane = { id, content: [], cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' }
+  const newPane: Pane = createPane(id)
   const newTree = splitPaneInTree(tree, paneId, direction, newPane)
   return { tree: newTree, newPaneId: id }
 }
@@ -150,10 +151,10 @@ function replacePaneData(tree: LayoutNode, paneId: string, newPane: Pane): Layou
 export function applyPresetLayout(paneIds: string[], layoutType: PresetLayout): LayoutNode {
   const panes = paneIds.map(id => ({
     type: 'pane' as const,
-    pane: { id, content: [], cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' },
+    pane: createPane(id),
   }))
 
-  if (panes.length === 0) return { type: 'pane', pane: { id: 'empty', content: [], cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' } }
+  if (panes.length === 0) return { type: 'pane', pane: createPane('empty') }
   if (panes.length === 1) return panes[0]
 
   switch (layoutType) {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { TmuxEngine } from '../tmux-engine'
 import { getAllPanes, countPanes } from '../layout-engine'
+import { emptyState } from '../state'
 import type { CommandType, ParsedCommand, TmuxState } from '../types'
 
 function cmd(type: string, args: ParsedCommand['args'] = {}): ParsedCommand {
@@ -24,14 +25,7 @@ describe('TmuxEngine', () => {
     })
 
     it('accepts custom initial state', () => {
-      const custom: TmuxState = {
-        sessions: [],
-        activeSessionId: '',
-        clipboard: '',
-        isDetached: true,
-        setOptions: {},
-        sourcedFiles: [],
-      }
+      const custom: TmuxState = emptyState()
       const eng = new TmuxEngine(custom)
       expect(eng.getState().sessions).toHaveLength(0)
       expect(eng.getState().isDetached).toBe(true)
@@ -367,14 +361,7 @@ describe('TmuxEngine', () => {
     })
 
     it('resets to custom state', () => {
-      const custom: TmuxState = {
-        sessions: [],
-        activeSessionId: '',
-        clipboard: 'test',
-        isDetached: true,
-        setOptions: {},
-        sourcedFiles: [],
-      }
+      const custom: TmuxState = { ...emptyState(), clipboard: 'test' }
       engine.reset(custom)
       expect(engine.getState().clipboard).toBe('test')
       expect(engine.getState().isDetached).toBe(true)

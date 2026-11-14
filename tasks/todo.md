@@ -18,13 +18,22 @@
 
 ## P1 核心基础模块（与旧引擎并存）
 
-- [ ] `types.ts`：`TmuxState` 新增 `keyTables`、`copyMode`、`files`、`log`，窗口级 `zoomed`
-- [ ] `errors.ts`：错误码 `{ code, params }`
-- [ ] `state.ts`、`selectors.ts`、`update.ts`（不可变更新）
-- [ ] `tokenize.ts`、`argparse.ts`（flag 在第一个位置参数处停止）
-- [ ] `target.ts`：解析 `-t session:window.pane`
-- [ ] `keymap.ts`：默认按键表、保留键
-- [ ] 各模块单测先行
+- [x] `types.ts`：`TmuxState` 新增 `options`、`keyTables`、`copyMode`、`prompt`、`files`、`log`、`nextId`，窗口级 `zoomed` / `layoutIndex`
+- [x] `errors.ts`：错误码 `{ code, params }`
+- [x] `state.ts`（含 `allocId` / `nextIdAfter`）、`selectors.ts`、`update.ts`（不可变更新）
+- [x] `tokenize.ts`、`argparse.ts`（flag 在第一个位置参数处停止）
+- [x] `target.ts`：解析 `-t session:window.pane`
+- [x] `keymap.ts`：默认按键表、保留键
+- [x] `options.ts`（选项默认值）、`files.ts`（虚拟文件路径归一化、保存记入日志）
+- [x] 各模块单测先行
+
+P1 结果：lint 0 错误、`tsc -b` 通过、测试 159 → 294 全过。旧引擎仍在用，旧字段标了 `@deprecated`，P3 切换时删。
+
+P1 定下的行为（P2 起照此实现）：
+- 生成的 ID 为 `p{n}` / `w{n}` / `s{n}`，共用一个只增不减的计数器；关卡初始状态的计数器自动设在已用编号之上。
+- 窗口编号 = 在会话里的位置（从 0 起，关闭后自动重排）。
+- 关掉当前所在的会话会脱离（detach），和真实 tmux 默认行为一致；旧引擎是自动切到另一个会话。
+- `status-right` 默认只显示主机名、不带时钟（真实 tmux 默认带时钟），这样 3-3 加时钟才看得出变化。
 
 ## P2 命令表与 executeLine
 

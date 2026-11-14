@@ -1,5 +1,6 @@
 import type { TmuxState, Session, Window, Pane, LayoutNode, ParsedCommand, EngineEvent, EngineEventHandler, Direction, PresetLayout } from './types'
 import * as Layout from './layout-engine'
+import { createPane, createWindow, emptyState } from './state'
 
 const PRESET_LAYOUTS: PresetLayout[] = ['even-horizontal', 'even-vertical', 'main-horizontal', 'main-vertical', 'tiled']
 
@@ -507,15 +508,15 @@ export class TmuxEngine {
     const win = this.makeWindow(winId, 'bash', { type: 'pane', pane }, paneId)
     const sessId = this.nextId('sess')
     const session: Session = { id: sessId, name: '0', windows: [win], activeWindowIndex: 0 }
-    return { sessions: [session], activeSessionId: sessId, clipboard: '', isDetached: false, setOptions: {}, sourcedFiles: [] }
+    return { ...emptyState(), sessions: [session], activeSessionId: sessId, isDetached: false }
   }
 
   private makePane(id: string): Pane {
-    return { id, content: [], cursorPosition: { row: 0, col: 0 }, isZoomed: false, cwd: '~' }
+    return createPane(id)
   }
 
   private makeWindow(id: string, name: string, layoutTree: LayoutNode, activePaneId: string): Window {
-    return { id, name, layoutTree, activePaneId, synchronizePanes: false }
+    return createWindow(id, name, layoutTree, activePaneId)
   }
 
   private nextId(prefix: string): string {
