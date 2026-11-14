@@ -32,3 +32,4 @@ test-results
 
 # Temp test scripts
 test-keyboard*.mjs
+.gstack/
