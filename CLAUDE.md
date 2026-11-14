@@ -4,104 +4,117 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TmuxCraft is a browser-based interactive game for learning tmux. Players complete levels by executing real tmux commands in a simulated terminal environment. Built with React 19, TypeScript, and Vite.
+TmuxCraft is a browser game that teaches tmux. Players type real tmux commands, press prefix keys and use the mouse in a simulated terminal to complete 26 levels (3 chapters) and timed challenges. Stack: React 19, TypeScript, Vite, Tailwind v4, Zustand, react-i18next (zh / en), framer-motion, Vitest + Testing Library, Playwright.
 
 ## Commands
 
 ```bash
-npm run dev       # Start dev server (Vite HMR)
-npm run build     # Type-check (tsc -b) then build for production
-npm run lint      # ESLint
-npm run preview   # Preview production build
-npm run typecheck # tsc -b
-npm test          # Run all tests (vitest run)
-npm run coverage  # Tests with v8 coverage (80% threshold on src/core and src/game)
-npx vitest run src/core/__tests__/command-parser.test.ts  # Run single test file
-npx vitest --watch  # Watch mode
+npm run dev        # Vite dev server
+npm run build      # tsc -b, then vite build
+npm run lint       # eslint .
+npm run typecheck  # tsc -b
+npm test           # vitest run (unit + component tests under src/)
+npm run coverage   # vitest run --coverage (v8, 80% threshold on src/core and src/game)
+npm run test:e2e   # playwright test (specs in e2e/, config in playwright.config.ts)
+npm run preview    # preview the production build
+npx vitest run src/game/levels/__tests__/levels.test.ts  # run one test file
+npx vitest         # watch mode
 ```
 
 `npm run lint`, `npm run typecheck` and `npm test` must all pass before committing.
 
 ## Architecture
 
-### Three-Layer Engine Design
+### Core (`src/core/`) — pure-function tmux simulator
 
-**Core Layer** (`src/core/`) — Framework-agnostic tmux simulation:
-- `tmux-engine.ts` — State machine managing Session → Window → Pane hierarchy. All mutations go through `execute(command)`. Uses internal ID counter (prefix-incrementing) for panes/windows/sessions.
-- `command-parser.ts` — Parses three input formats: CLI commands (`tmux split-window -v`), colon commands (`:split-window`), and prefix key sequences (`Ctrl+b "`). Returns `ParsedCommand | ParseError`. Includes Levenshtein distance for command suggestions on typos.
-- `layout-engine.ts` — Binary tree layout system. Each `LayoutNode` is either a `pane` leaf or a `split` node with two children and a ratio. Handles split, close, resize (ratio clamped to [0.1, 0.9]), swap, and preset layouts (even-horizontal, even-vertical, main-horizontal, main-vertical, tiled).
-- `keybinding-handler.ts` — Two-step prefix key state machine: `idle` → (Ctrl+b) → `waiting` → (second key) → execute + reset. 2-second timeout auto-resets. Supports Ctrl+Arrow for resize.
-- `types.ts` — All domain types. `TmuxState` → `Session[]` → `Window` (with `layoutTree: LayoutNode`) → `Pane`. 30+ command types.
+No React, no classes, no mutation: every function takes a `TmuxState` and returns a new one.
+- `types.ts` — `TmuxState` (sessions, `options`, `keyTables`, `copyMode`, `prompt`, `files`, `log`, `nextId`, `prefixPending`, `outer`, `editing`) → `Session` → `Window` (`layoutTree`, `activePaneId`, `synchronizePanes`, `zoomed`, `layoutIndex`) → `Pane` (`content`, `input`, `cwd`).
+- `state.ts` — `emptyState()` (no server, detached), `defaultState()` (one session `0`, window `bash`, pane `p1`), builders, `allocId` / `nextIdAfter`. IDs are `p{n}` / `w{n}` / `s{n}` from one counter that never reuses a number.
+- `commands/` — the single command table `COMMANDS` (`commands/index.ts`), one file per area (session, window, pane, layout, options, keys, files, buffer, send-keys). Each `CommandSpec` has `name`, `aliases`, `flags`, `minArgs` / `maxArgs`, `requiresServer`, `run`. `find.ts` resolves names/aliases/unique prefixes against tmux's full name list (`tmux-names.ts`); a real tmux command the simulator lacks is `command.unsupported`, a typo gets a Levenshtein suggestion (`suggest.ts`).
+- `execute.ts` — `executeLine` (tmux syntax inside tmux: `:` prompt, key bindings, config lines) and `executeArgv` (`tmux …` from the shell). Both tokenize (`tokenize.ts`), parse flags (`argparse.ts`), run the spec and append a log entry.
+- `shell.ts` / `shell-builtins.ts` / `script.ts` — the pane shell: `submitLine` is what the command box runs (`:`-prefixed → `executeLine`, otherwise a shell line, broadcast when `synchronize-panes` is on). Supports `tmux`, `exit`, `bash`/`sh <script>`, `echo`, `clear`, `pwd`, `ls`, `cat`, `vim`/`vi`/`nano` (opens the editor); only `;` and `&&`.
+- `target.ts` — `-t` parsing: `session:window.pane`, `%<paneId>`, `@<windowId>`, `+`/`-`, unique name prefixes.
+- `keymap.ts` — `DEFAULT_PREFIX` (`C-b`), `DEFAULT_PREFIX_BINDINGS` (key → command line), `RESERVED_KEYS` (`C-w`, `C-t`, `C-n`: the browser keeps them), `keyFromEvent`, `normalizeKey`.
+- `reduce-key.ts` (`reduceKey`) → `key-handler.ts` (prefix / root tables) or `copy-mode.ts`. `mouse.ts` (`clickPane`, `dragBorder`, only with `mouse on`). `prompt.ts` (`submitPrompt`, `cancelPrompt`; `confirm-before` prompts run on `y`). `files.ts` (virtual files, `normalizePath`, `saveFile` logs `save-file` and closes the editor).
+- `options.ts` — `OPTIONS` with defaults; `getOption` / `isOn`. Options change behaviour: `prefix`, `mouse`, `status`, `status-position`, `status-style`, `status-left` / `status-right` (rendered by `status-format.ts` `renderStatus`). `bind-key` edits `keyTables`.
+- `errors.ts` — `ERROR_CODES`, `TmuxError { code, params, suggestion?, at? }`, `Result<T>`. Core never produces prose.
+- `layout-engine.ts` — binary `LayoutNode` tree: split, close, resize (ratio clamped to [0.1, 0.9], one cell = 1% of the split), swap, presets (`PRESET_LAYOUTS`), `calculateLayout`.
+- `selectors.ts` (`getActiveSession` / `getActiveWindow` / `getActivePane`, `locatePane`, …), `update.ts` (immutable updates, `appendLog`), `engine.ts` (`ENGINE` = `COMMANDS` + shell, passed into everything that runs lines).
 
-**Game Layer** (`src/game/`) — Level definitions and game mechanics:
-- `levels/chapter1/`, `chapter2/`, `chapter3/` — 26 levels total (11+8+7). Each level defines `initialState`, `objectives` with validator functions, `optimalSteps`, and hint keys.
-- `levels/helpers.ts` — State builder functions: `paneNode()`, `split()`, `makeWindow()`, `makeSession()`, `makeState()`, `singlePaneState()`.
-- `validator.ts` — Checks objectives against current TmuxState. Returns `{ isComplete, completedObjectives }`. Evaluates ALL objectives simultaneously — does NOT persist previously completed objectives.
-- `scoring.ts` — 3-star system: completed, efficient (≤ optimal × 1.5), noHints.
-- `challenge/` — Procedural challenge generator with difficulty tiers (beginner 60s, intermediate 90s, advanced 120s), leaderboard (localStorage).
-- `achievements.ts` — 15 achievements checked both on level completion and per-command (context achievements for combo count and pane count).
+### Game (`src/game/`)
 
-**UI Layer** (`src/components/`) — React components:
-- Screen-based navigation via `useGameStore().setScreen()` (not URL routing). 9 screens switched in `App.tsx`: home, chapter-select, level-select, game, challenge-select, challenge, achievements, reference, settings.
-- `game/GameScreen.tsx` — Main gameplay: left terminal (60%) + right objectives (40%) + bottom taskbar. Integrates engine via `useTmuxEngine` hook. Contains `renderHintText()` which parses hint strings with regex and wraps keyboard shortcuts in styled `<kbd>` elements. Manages command history (local state, up/down arrow navigation) and combo system.
-- `game/PaneRenderer.tsx` — Recursive renderer for `LayoutNode` tree. Active pane highlighted with accent border. Zoom uses absolute positioning (not in layout tree — stored as `isZoomed` per Pane).
+- `sim/simulate.ts` — `PlayerInput` (`line`, `prompt`, `key`, `click`, `drag`, `save`), `applyInput(state, input)` → `InputResult { state, ok, output, errors, handled, counted }`, and `simulate(state, inputs)` → `{ state, steps, results }`. `sim/inputs.ts` has builders `line`, `prompt`, `key`, `keys`, `click`, `drag`, `save`. The UI, level solutions and tests all use this one path.
+- `level-types.ts` — `LevelDefinition`, `LevelObjective { id, descriptionKey, validate }`, `TutorialStep { messageKey, done }`, `ChallengeTask`, `ChallengeGoal`, `ChallengeRecord`, `LevelProgress`, `StarRating`.
+- `levels/chapter1|2|3/` — 11 + 8 + 7 levels, grouped by topic file and re-exported from each `index.ts` (`chapter1Levels`, …); `checks.ts` holds chapter-specific checks. `levels/predicates.ts` has shared read-only checks: `sessionNamed`, `windowNamed`, `hasPanes`, `attachedTo`, layout shapes (`isRow`, `isColumn`, `isEvenRow`, `isEvenColumn`, `isGrid`), log queries (`ran`, `ranInOrder` with a `LogQuery` of name / origin / key / file / line / detail), `paneShows`. `levels/helpers.ts` builds states: `singlePaneState`, `makeState`, `makeSession`, `makeWindow`, `split`, `paneNode`.
+- `chapters.ts` — `CHAPTERS`, `ALL_LEVELS`, `findLevel`, `levelAfter`, `nextUnfinished`, star totals. Chapter sizes come from here; nothing else stores them.
+- `validator.ts` (`validateLevel` → `{ isComplete, progress, completedObjectives, remainingObjectives }`), `scoring.ts` (`calculateStars`: completed / efficient = commands ≤ `efficientBudget(optimalSteps)` = ceil(optimal × 1.5) / noHints), `hint-system.ts` (3 hints per level).
+- `challenge/` — `generateChallenge(difficulty, random = Math.random)` → `ChallengeGoal { difficulty, tasks, solution }` (per-tier generators in `beginner.ts` / `intermediate.ts` / `advanced.ts`, task factories in `tasks.ts`); `challengeComplete`; `seededRandom` (`random.ts`); `CHALLENGE_TIME_LIMITS` 60 / 90 / 120 s (`difficulty.ts`); `bestRecord` / `isNewBest` (`records.ts`). Goals are played from `defaultState()`. No unlock requirements.
+- `reference.ts` — the cheat-sheet table `REFERENCE` (5 categories), rendered by `components/reference/`.
+
+### UI (`src/components/`)
+
+- Navigation is `useGameStore().setScreen()`; `App.tsx` lazy-loads 8 screens: home, chapter-select, level-select, game, challenge-select, challenge, reference, settings.
+- `ui/` — shared primitives (Button / IconButton, Card, Dialog, Kbd, Pill, ProgressBar, ScreenHeader, StarRating, Stat, PageBackground, Confetti, `cx`). Colour variants use the `Tone` type (`ui/tone.ts`), applied as a `data-tone` attribute.
+- `screens/` — home, chapter/level select, reference, settings (version read from `package.json`), language toggle.
+- `game/` — `GameScreen` mounts `LevelPlay` with `key={`${level.id}-${attempt}`}` (retry = remount). `useLevelPlay` wires session, validation, counters, hints and completion. `TerminalView` (panes, status bar, prompt line, output log, command box, `FileEditor`) and `PlayLayout` are shared with `challenge/ChallengeScreen`. `renderHintText` (`hint-utils.tsx`) turns backtick spans in level text into `<Kbd>`; `Walkthrough` renders `tutorialSteps`.
+- `challenge/` — select screen (best records), round screen with countdown, task list, result dialog.
 
 ### Hooks (`src/hooks/`)
 
-- `useTmuxEngine.ts` — React wrapper for TmuxEngine. Uses refs to maintain instance across renders. Auto-resets engine when `initialState` prop changes (level transitions).
-- `useKeyCapture.ts` — Browser key capture for prefix shortcuts. Creates `KeybindingHandler`, attaches to `window.keydown`. Special handling for `rename-window` (triggers browser prompt for name input).
+- `useTmuxSession(initial)` — holds `{ state, transcript }`; `send(input)` calls `applyInput`; `update(change)` changes state without it being an input (`cancelPrompt`, `cancelPrefix`, `closeEditor`). The initial state is read once — remount to restart.
+- `useKeyCapture(onKey, enabled)` — window keydown listener in capture phase; converts with `keyFromEvent` and calls `preventDefault` only when tmux handled the key.
 
-### State Management (Zustand)
+### Stores (`src/store/`, Zustand)
 
-Three stores in `src/store/`:
-- `game-store.ts` — Session state: current screen, active level, command count, combo, hints. Not persisted.
-- `progress-store.ts` — Persisted to `localStorage` key `tmuxcraft-progress` (schema version 2). Level stars, achievements, challenge records, chapter completion. `CHAPTER_SIZES` constant defines level counts per chapter (currently `{1: 11, 2: 8, 3: 7}`).
-- `user-store.ts` — Persisted to `localStorage` key `tmuxcraft-user`. Language setting (`zh`|`en`) only.
+- `game-store.ts` — not persisted: screen, current level/chapter, `challengeDifficulty`, command count, hints used, combo, stars.
+- `progress-store.ts` — persisted under `tmuxcraft-progress`, `PROGRESS_VERSION = 3`; holds `levelProgress` and `challengeRecords` only. `progress-migrate.ts` validates older saves entry by entry, keeps level progress and challenge records, and drops what it cannot read.
+- There is no user store. The language lives in i18next only (`src/i18n/language.ts`, `useLanguage()`), cached by the language detector in localStorage `i18nextLng`.
 
-### Command Flow (End-to-End)
+### Input flow (end to end)
 
-User input → `CommandParser.parseInput()` → `ParsedCommand` → `TmuxEngine.execute()` → state update → React re-render via `useTmuxEngine` hook → `validateLevel()` checks objectives.
-
-For prefix keys: `useKeyCapture` → `KeybindingHandler.handleKeyDown()` → `parseKeySequence()` → same engine execution path.
-
-Validation skips when `commandCount === 0` to avoid race conditions before first command.
+Keystroke: `useKeyCapture` → `TerminalView` `play({ type: 'key' })` → `useTmuxSession.send` → `applyInput` → `reduceKey` → prefix binding → `executeLine(binding, { origin: 'key', key })` → log entry. Command box: `play({ type: 'line' })` → `submitLine` → shell or `executeLine` / `executeArgv`. Then the new state re-renders, `useLevelPlay` runs `validateLevel` on it, and `onResult` counts the input if `counted`; completion (stars + save) fires once all objectives hold and the command count is > 0.
 
 ### Critical Gotchas
 
-- **Objective validation is stateless**: All objectives must be true simultaneously at time of check. Sequential mutually-exclusive objectives (e.g., "active pane is p1" then "active pane is p2") won't work.
-- **Chapter size constants must stay in sync**: `CHAPTER_SIZES` in `progress-store.ts` AND `CHAPTERS` array totals in `ChapterSelect.tsx` must match actual level counts.
-- **i18n keys must exist in both files**: Level definitions reference keys that must be present in both `src/i18n/zh.json` and `src/i18n/en.json`.
-- **Challenge mode unlock**: Beginner requires Chapter 1 complete, Intermediate requires Chapter 2, Advanced requires Chapter 3.
-- **All user-facing text must support i18n**: This includes dynamically generated text (e.g., challenge goal descriptions in `challenge-generator.ts`). Never hardcode Chinese or English strings — either use `t()` keys or accept a `lang` parameter and produce both language variants. The challenge generator uses the `lang` parameter approach since its descriptions contain runtime values.
+- **Validation reads the current state only**, all objectives at once; nothing is remembered between checks. To require that something *happened* (detached then reattached, set by a config file, split with a custom key), query the append-only `state.log` with `ran` / `ranInOrder`. Only successful commands are logged; each entry has an `origin` (`typed` / `key` / `mouse` / `config` / `script`), the firing `key`, the source `file`, and command-specific `detail` (e.g. `split-window` logs `direction: 'h' | 'v'`). Besides command names the log has `shell`, `save-file` and `copy-selection`.
+- **What counts as a step** (`isStep` in `sim/simulate.ts`): an input that added a log entry. Opening a prompt (`command-prompt`, `confirm-before`) does not count, the prefix key alone does not count, and a shell line that only failed does not count. `optimalSteps` must equal what `simulate` counts for the level's `solution`.
+- **Nothing counts before the first command**: completion is skipped while `commandCount === 0`, and `shownObjectives` hides ticks, so a level never starts half-solved.
+- **Commands never log themselves**: the executor logs after a successful `run`; a failing command leaves the state untouched and stops the rest of a `;` sequence.
+- **Split direction naming is inverted vs. tmux flags**: a `LayoutNode` with `direction: 'vertical'` lays children side by side (`split-window -h`); `'horizontal'` stacks them.
+- **Bare-number pane targets** (`-t 1`) are pane indexes in the current window, as in tmux; write `:1` or the window name to target a window.
+- **The first `new-session`** (no sessions yet) sources `~/.tmux.conf` automatically; later edits need `source-file`.
+- **Hand-built states** must use `makeState` (or set `nextId` via `nextIdAfter`), otherwise generated IDs collide with existing ones.
+- **Errors are codes**: add a new code to `ERROR_CODES` and give it `errors.<code>` text in both locales; `i18n/format-error.ts` renders it. A test rejects text for codes core cannot raise.
+- **Adding or removing a level**: add it to the chapter's `index.ts` array; update the hard-coded counts in `game/__tests__/chapters.test.ts`, `game/levels/__tests__/levels-load.test.ts` and `components/screens/__tests__/LevelSelect.test.tsx`; add all its i18n keys to both files (the i18n test also fails on level keys no level uses).
+- **React state following the engine**: set state from the `send`/`update` callbacks, never synchronously in an effect body (lint rule `react-hooks/set-state-in-effect`). Re-run lint after fixing a batch; some errors are hidden behind others.
+- **Tests must assert the effect**, not just "state changed" (opening a confirm prompt also changes state).
 
 ### Level Definition Conventions
 
-When adding/modifying levels:
-- Level IDs must match pattern `"chapter-level"` (e.g., `"2-4"`), sequential within chapter
-- `titleKey` and `descriptionKey` reference `levels.X-Y.title` / `levels.X-Y.description` in i18n
-- Hints reference `game.hints.X-Y-N` (N = 1-3), multi-objective levels use `game.objectives.X-Y-key`
-- Tutorial levels use `game.tutorial.X-Y-stepN` keys
-- Use helper functions from `levels/helpers.ts` to build initial state (`singlePaneState()`, `makeState()`, etc.)
-- Update `CHAPTER_SIZES` in `progress-store.ts` and `CHAPTERS` in `ChapterSelect.tsx` when changing level counts
+- IDs are `"chapter-level"` (`"2-4"`), sequential within the chapter; `chapter` and `level` fields match.
+- `titleKey` / `descriptionKey` → `levels.X-Y.title` / `levels.X-Y.description`; `hints` → `game.hints.X-Y-1..3`; multi-objective levels use `game.objectives.X-Y-<objectiveId>`; walk-through steps use `game.tutorial.X-Y-stepN`. Single-objective levels may reuse `levels.X-Y.description` as the objective text (e.g. 1-1, 1-3).
+- Every level needs an executable `solution: PlayerInput[]` written with the `sim/inputs.ts` builders, matching what the hints teach. `levels/__tests__/levels.test.ts` checks every level: not complete at start, not completed by no-op commands (`tmux ls`, `echo hi`, `clear`), every solution input works, the solution completes it, steps equal `optimalSteps`, no prefix of the solution completes it, and `tutorialSteps` tick in order.
+- Shortcuts that must not pass (and fair alternatives that must) go in `levels/__tests__/chapter1|2|3.test.ts`, using `completes` / `met` / `play` from `level-kit.ts`. Write the failing test first.
+- Mark keys and commands in level text with backticks so they render as key caps.
 
 **Objective clarity requirements** (critical for player experience):
 - Every objective description must tell the player **exactly** what to do. Never use vague phrases like "有意义的名字" (meaningful names) or "指定比例" (specified proportions) when the validator checks for specific values.
-- If the validator checks for specific names, numbers, or targets, the description **must** state them explicitly (e.g., "将窗口命名为 'editor'" not "起有意义的名字").
-- When a level has multiple distinct sub-goals, split into multiple objectives with individual `descriptionKey` entries under `game.objectives.X-Y-key` (see 1-9 and 1-11 as examples). Single-objective levels are fine when the task is genuinely singular and unambiguous.
-- The description shown in the level select screen (`levels.X-Y.description`) should give a clear summary; the per-objective descriptions (`game.objectives.X-Y-key`) provide specific checkable steps.
-- `TmuxState` includes `setOptions: Record<string, string>` and `sourcedFiles: string[]` to track `set-option` and `source-file` commands. Level validators (e.g., 3-3, 3-4) use these fields.
+- If the validator checks for specific names, numbers, or targets, the description **must** state them (e.g. 1-9: "The first window (number 0) is renamed to 'editor'"; 2-1: "The left pane takes 67% to 73% of the window width").
+- When a level has several distinct sub-goals, give each its own objective with a `game.objectives.X-Y-<id>` key (see 1-9, 1-11, 3-4). Single-objective levels are fine when the task is genuinely singular.
+- If a validator requires *how* something was done (a specific key, `join-pane`, a line of `~/.tmux.conf`, a script), the description must say so (see 2-4, 3-4, 3-5).
+- `levels.X-Y.description` (level select) is the summary; `game.objectives.*` are the checkable steps.
 
 ### i18n
 
-`react-i18next` with two translation files: `src/i18n/zh.json` and `src/i18n/en.json`. Fallback language is `zh`. All user-facing text uses `t()` keys. tmux commands themselves are never translated.
+`react-i18next` with `src/i18n/zh.json` and `src/i18n/en.json`; fallback `zh`; `<html lang>` follows the language. Both files must have identical key sets and no empty strings (`i18n/__tests__/level-keys.test.ts`). All user-facing text goes through `t()`, including runtime text: challenge tasks are `{ key, params }` under `challenge.tasks.*`, rendered with `t(key, params)`; errors via `formatError`. tmux commands are never translated.
 
-## Tailwind v4
+## Styling
 
-Uses CSS-based configuration in `src/styles/globals.css` with `@theme` directive. Custom color tokens (e.g., `bg-bg-primary`, `text-accent`, `border-border`) and font variables (`--font-pixel`, `--font-mono`, `--font-ui`). Custom utility classes: `.pixel-box`, `.pixel-btn`, `.hp-bar`, `.glow-text`. Custom animations: `cursor-blink`, `shimmer`, `float`.
+Tailwind v4, configured in `src/styles/globals.css` via `@theme`. `--color-*: initial` removes Tailwind's default palette: only the project tokens exist (`bg-page`, `bg-surface`, `text-ink-soft`, `bg-accent-deep`, `text-term-text`, `rounded-card`, `shadow-card`, `font-display` / `font-mono` / `font-ui`, …). `data-tone="…"` and `data-chapter="1|2|3"` set the `tone` / `chapter` colours (`bg-tone-soft`, `text-chapter-strong`, …) for everything inside; `.on-dark` marks the terminal for focus/scrollbar colours. Every global rule must sit inside `@layer base` or `@layer components` — an unlayered rule overrides all utility classes.
 
 ## Testing
 
-Tests cover the core engine layer only (`src/core/__tests__/`). Tests use a `cmd(type, args)` helper to construct `ParsedCommand` objects (isolating engine logic from parser). The engine is tested by creating a `TmuxEngine` instance, executing commands, and asserting on the resulting `TmuxState`. No React component tests exist.
+Vitest (jsdom, `src/test-setup.ts` loads jest-dom) runs `src/**/*.{test,spec}.{ts,tsx}` in `__tests__/` folders next to the code: core, commands, game (levels, challenge, sim, reference), hooks, store, i18n and components (Testing Library + user-event). About 82 files / 1900 tests. Test files import `describe` / `it` / `expect` from `vitest` explicitly. Helpers: `core/__tests__/harness.ts` (`testEngine`, `must`, `errorOf`, `runLines`), `core/__tests__/shell-engine.ts` (`typeLines`, `pressKeys`, `deepFreeze`), `game/levels/__tests__/level-kit.ts`, `components/game/__tests__/terminal-harness.tsx` (`openTerminal`), `components/screens/__tests__/fixtures.ts`. Coverage covers `src/core/**/*.ts` and `src/game/**/*.ts` (80% lines/functions/branches/statements). Playwright tests live in `e2e/` and run with `npm run test:e2e` (they start the dev server); Vitest does not pick them up.
 
 ## Path Alias
 
