@@ -83,6 +83,8 @@ export interface PromptState {
   readonly label: string
   readonly initial: string
   readonly template: string
+  /** A yes/no question (`confirm-before`): answering `y` runs the template, anything else only closes it. */
+  readonly confirm?: boolean
 }
 
 export interface Pane {

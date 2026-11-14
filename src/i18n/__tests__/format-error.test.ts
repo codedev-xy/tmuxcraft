@@ -13,6 +13,12 @@ import en from '../en.json'
 
 type Tree = { readonly [key: string]: string | Tree }
 
+const CORE_SOURCES: Readonly<Record<string, string>> = import.meta.glob(['/src/core/**/*.ts', '!**/__tests__/**'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
 const LANGS = ['zh', 'en'] as const
 type Lang = typeof LANGS[number]
 const TREES: Readonly<Record<Lang, Tree>> = { zh: zh.errors as Tree, en: en.errors as Tree }
@@ -67,14 +73,49 @@ describe('errors translations', () => {
     }
   })
 
-  it('zh and en have the same keys, and only error codes plus didYouMean', () => {
-    const allowed = [...ERROR_CODES, 'didYouMean'].sort()
+  it('zh and en have the same keys, and only error codes plus didYouMean and listSeparator', () => {
+    const allowed = [...ERROR_CODES, 'didYouMean', 'listSeparator'].sort()
     expect(leafPaths(TREES.zh).sort()).toEqual(allowed)
     expect(leafPaths(TREES.en).sort()).toEqual(allowed)
   })
 
-  it('no error code group is named didYouMean', () => {
-    expect(ERROR_CODES.some(code => code.split('.')[0] === 'didYouMean')).toBe(false)
+  it('no error code group is named didYouMean or listSeparator', () => {
+    expect(ERROR_CODES.some(code => ['didYouMean', 'listSeparator'].includes(code.split('.')[0]))).toBe(false)
+  })
+
+  it('has only codes that the core can raise', () => {
+    const sources = Object.entries(CORE_SOURCES).filter(([path]) => !path.endsWith('/errors.ts')).map(([, text]) => text)
+    const unraised = ERROR_CODES.filter(code => !sources.some(text => text.includes(`'${code}'`)))
+    expect(unraised).toEqual([])
+  })
+})
+
+describe('error messages', () => {
+  it.each(LANGS)('%s: names the command in flag errors, as tmux does', lang => {
+    const unknown = formatError(T[lang], { code: 'parse.unknownFlag', params: { command: 'split-window', flag: '-q' } })
+    expect(unknown).toContain('split-window')
+    expect(unknown).toContain('-q')
+    const missing = formatError(T[lang], { code: 'parse.missingArg', params: { command: 'join-pane', flag: '-s' } })
+    expect(missing).toContain('join-pane')
+    expect(missing).toContain('-s')
+  })
+
+  it('names tmux\'s own words for nesting, and the fix that applies to each command', () => {
+    const nestedNew = formatError(T.en, { code: 'session.nested' })
+    const nestedAttach = formatError(T.en, { code: 'session.nestedAttach' })
+    expect(nestedNew).toContain('sessions should be nested with care')
+    expect(nestedAttach).toContain('sessions should be nested with care')
+    for (const lang of LANGS) {
+      expect(formatError(T[lang], { code: 'session.nested' })).toContain('-d')
+      expect(formatError(T[lang], { code: 'session.nestedAttach' })).toContain('switch-client')
+      expect(formatError(T[lang], { code: 'session.nestedAttach' })).not.toContain('-d')
+    }
+  })
+
+  it('joins a list param with the separator of the language', () => {
+    const error: TmuxError = { code: 'parse.ambiguousCommand', params: { command: 'sel', matches: ['select-pane', 'select-window'] } }
+    expect(formatError(T.en, error)).toContain('select-pane, select-window')
+    expect(formatError(T.zh, error)).toContain('select-pane、select-window')
   })
 })
 
@@ -137,6 +178,8 @@ describe('formatError on errors produced by the core', () => {
     ['join-pane without -s', defaultState(), ':join-pane', 'parse.missingArg'],
     ['missing file', defaultState(), 'cat nope.txt', 'file.notFound'],
     ['unknown flag', defaultState(), ':split-window -Q', 'parse.unknownFlag'],
+    ['ambiguous command', defaultState(), ':select', 'parse.ambiguousCommand'],
+    ['attach inside tmux', defaultState(), 'tmux attach', 'session.nestedAttach'],
     ['duplicate session', detached, 'tmux new -d -s 0', 'session.duplicate'],
     ['unknown option', defaultState(), ':set -g nope on', 'option.unknown'],
     ['unknown layout', defaultState(), ':select-layout nope', 'layout.unknown'],
@@ -153,7 +196,7 @@ describe('formatError on errors produced by the core', () => {
       const text = formatError(T[lang], error)
       expect(text, `${lang}: ${text}`).not.toContain('{{')
       expect(text).not.toContain('errors.')
-      for (const value of Object.values(error.params ?? {})) expect(text).toContain(String(value))
+      for (const value of Object.values(error.params ?? {}).flat()) expect(text).toContain(String(value))
     }
   })
 

@@ -1,16 +1,13 @@
 import { useCallback, useRef, useState } from 'react'
-import type { TmuxError } from '@/core/errors'
 import type { TmuxState } from '@/core/types'
 import { applyInput } from '@/game/sim/simulate'
 import type { InputResult, PlayerInput } from '@/game/sim/simulate'
+import { commandEcho } from './command-echo'
+import type { TranscriptEntry } from './transcript'
+
+export type { CommandSource, TranscriptEntry } from './transcript'
 
 export const TRANSCRIPT_LIMIT = 200
-
-/** One line of the log under the terminal: what was typed, what came back, what went wrong. */
-export type TranscriptEntry =
-  | { readonly kind: 'input'; readonly text: string }
-  | { readonly kind: 'output'; readonly text: string }
-  | { readonly kind: 'error'; readonly error: TmuxError }
 
 export interface TmuxSession {
   readonly state: TmuxState
@@ -26,8 +23,14 @@ interface Snapshot {
   readonly transcript: readonly TranscriptEntry[]
 }
 
-function record(transcript: readonly TranscriptEntry[], input: PlayerInput, result: InputResult): readonly TranscriptEntry[] {
-  const echo: TranscriptEntry[] = input.type === 'line' && input.text.trim() !== '' ? [{ kind: 'input', text: input.text }] : []
+function echoOf(before: TmuxState, input: PlayerInput, after: TmuxState): TranscriptEntry[] {
+  if (input.type === 'line') return input.text.trim() === '' ? [] : [{ kind: 'input', text: input.text }]
+  const command = commandEcho(before, input, after)
+  return command ? [command] : []
+}
+
+function record(transcript: readonly TranscriptEntry[], before: TmuxState, input: PlayerInput, result: InputResult): readonly TranscriptEntry[] {
+  const echo = echoOf(before, input, result.state)
   const output = result.output.map((text): TranscriptEntry => ({ kind: 'output', text }))
   const errors = result.errors.map((error): TranscriptEntry => ({ kind: 'error', error }))
   const added = [...echo, ...output, ...errors]
@@ -54,7 +57,7 @@ export function useTmuxSession(initial: TmuxState | (() => TmuxState)): TmuxSess
   const send = useCallback((input: PlayerInput): InputResult => {
     const current = latest.current
     const result = applyInput(current.state, input)
-    const transcript = record(current.transcript, input, result)
+    const transcript = record(current.transcript, current.state, input, result)
     if (result.state !== current.state || transcript !== current.transcript) commit({ state: result.state, transcript })
     return result
   }, [commit])

@@ -10,18 +10,17 @@
     "challengeDesc": "限时闯关，挑战极限操作速度",
     "reference": "命令手册",
     "settings": "设置",
-    "settingsDesc": "语言偏好及个人设置"
-  },
-  "welcome": {
-    "title": "欢迎来到 TmuxCraft!",
-    "enterUsername": "请输入你的用户名:",
-    "randomGenerate": "随机生成",
-    "start": "开始"
+    "settingsDesc": "语言偏好及个人设置",
+    "continue": "继续：{{id}} {{title}}",
+    "start": "开始游戏：{{id}} {{title}}",
+    "allDone": "全部关卡已通关！回顾各章节",
+    "progress": "总进度",
+    "referenceDesc": "随时查阅 tmux 命令和快捷键",
+    "language": "界面语言"
   },
   "chapters": {
     "select": "选择章节",
     "subtitle": "选择一个章节开始你的 tmux 之旅",
-    "unlockPrevious": "完成上一章解锁",
     "chapter1": {
       "title": "第一章：基础操作",
       "description": "掌握 tmux 的日常核心命令"
@@ -35,11 +34,14 @@
       "description": "配置、脚本和工作流优化"
     },
     "progress": "{{completed}}/{{total}} 关完成",
-    "locked": "通关前一章节后解锁"
+    "stars": "{{count}} / {{total}} 颗星",
+    "progressLabel": "{{title}} 进度",
+    "cleared": "已通关",
+    "next": "下一关",
+    "best": "最少步数：{{count}}"
   },
   "levels": {
     "select": "选择关卡",
-    "locked": "未解锁",
     "completed": "已完成",
     "1-1": { "title": "初识 tmux", "description": "创建一个 tmux 会话并进入它" },
     "1-2": { "title": "分屏操作", "description": "做一次左右分屏和一次上下分屏，最后至少有 3 个面板" },
@@ -69,18 +71,14 @@
     "3-7": { "title": "毕业考核", "description": "写配置文件 ~/.tmux.conf 和启动脚本 ~/work.sh，运行脚本进入会话 'work'，再用 Ctrl+a | 把窗口 'main' 左右分屏" }
   },
   "game": {
-    "task": "任务",
     "taskObjectives": "任务目标",
     "walkthrough": "分步引导",
     "outputPlaceholder": "— 输入命令后将在此显示输出 —",
     "hint": "提示",
-    "hintsRemaining": "剩余 {{count}} 次",
+    "hintsRemaining": "还剩 {{count}} 条",
     "commands": "命令数",
     "combo": "连击",
     "optimal": "最优解",
-    "steps": "{{count}} 步",
-    "stepsShort": "步",
-    "locked": "🔐 完成前关解锁",
     "levelComplete": "关卡完成！",
     "stars": {
       "completed": "完成关卡",
@@ -93,8 +91,6 @@
     "prefixActive": "前缀键已激活，请按下一个键...",
     "commandBox": "命令",
     "commandPlaceholder": "输入命令，按回车执行",
-    "commandError": "无效命令",
-    "didYouMean": "你是不是想输入: {{command}}",
     "objectives": {
       "1-2-side-by-side": "用 `Ctrl+b %` 做一次左右分屏",
       "1-2-stacked": "用 `Ctrl+b \"` 做一次上下分屏",
@@ -151,9 +147,9 @@
       "1-3-1": "按 `Ctrl+b` 后再按方向键，会移到那个方向的面板。",
       "1-3-2": "你在左上角，目标在右下角：向右一次，向下一次。",
       "1-3-3": "先按 `Ctrl+b →`，再按 `Ctrl+b ↓`",
-      "1-4-1": "`Ctrl+b x` 关闭的是当前面板。一开始当前面板是左边那个，不是要关的那个。",
-      "1-4-2": "先用 `Ctrl+b →` 移到 'CLOSE ME' 面板，再用 `Ctrl+b x` 关闭它（也可以在里面输入 `exit`）。",
-      "1-4-3": "先按 `Ctrl+b →`，再按 `Ctrl+b x`",
+      "1-4-1": "`Ctrl+b x` 关闭的是当前面板（tmux 会先问一句，按 `y` 确认）。一开始当前面板是左边那个，不是要关的那个。",
+      "1-4-2": "先用 `Ctrl+b →` 移到 'CLOSE ME' 面板，再按 `Ctrl+b x`，底部问是否关闭时按 `y`（也可以在里面输入 `exit`）。",
+      "1-4-3": "先按 `Ctrl+b →`，再按 `Ctrl+b x`，最后按 `y` 确认",
       "1-5-1": "每次分屏都把当前面板对半分。先分一次，再把两半各分一次。",
       "1-5-2": "`Ctrl+b %` 分成左右，`Ctrl+b \"` 分成上下。分屏后焦点在新面板上，用 `Ctrl+b ←` 回到左半边。",
       "1-5-3": "依次按 `Ctrl+b %`、`Ctrl+b \"`、`Ctrl+b ←`、`Ctrl+b \"`",
@@ -227,7 +223,7 @@
       "1-3-step1": "按 `Ctrl+b →` 移到右边一列",
       "1-3-step2": "按 `Ctrl+b ↓` 移到右下角的目标面板",
       "1-4-step1": "按 `Ctrl+b →` 移到 'CLOSE ME' 面板",
-      "1-4-step2": "按 `Ctrl+b x` 关闭它",
+      "1-4-step2": "按 `Ctrl+b x`，再按 `y` 确认关闭",
       "1-5-step1": "按 `Ctrl+b %` 分成左右两半",
       "1-5-step2": "按 `Ctrl+b \"` 把右半边分成上下两个",
       "1-5-step3": "按 `Ctrl+b ←` 回到左半边，再按 `Ctrl+b \"` 把它也分成上下两个",
@@ -280,7 +276,27 @@
       "3-7-step2": "输入 `vim ~/work.sh`，写好脚本后点保存",
       "3-7-step3": "输入 `bash ~/work.sh`：服务器启动时读取 `~/.tmux.conf`，脚本建好会话 'work' 并进入",
       "3-7-step4": "按 `Ctrl+a |` 把窗口 'main' 左右分屏"
-    }
+    },
+    "levelNumber": "第 {{id}} 关",
+    "objectivesDone": "已完成 {{done}} / {{total}} 个目标",
+    "quickReference": "命令速查",
+    "searchCommands": "搜索命令",
+    "searchPlaceholder": "输入命令或按键，比如 split",
+    "showHint": "看提示",
+    "hintCost": "看提示会失去「无提示通关」这颗星，先自己试试吧。",
+    "hintCostPaid": "这一关用过提示了，拿不到「无提示通关」星。",
+    "objectiveDone": "已完成",
+    "objectiveTodo": "未完成",
+    "stats": "统计",
+    "efficientStar": "高效星",
+    "budgetLeft": "还剩 {{count}} 条",
+    "budgetMissed": "未达成",
+    "budgetNote": "用不超过 {{count}} 条命令完成，就能拿到「高效通关」星。",
+    "starEarned": "已获得",
+    "starMissed": "未获得",
+    "commandsUsed": "使用命令",
+    "allLevelsComplete": "全部关卡都通关了，太厉害了！",
+    "terminalLabel": "模拟终端"
   },
   "challenge": {
     "title": "挑战模式",
@@ -293,27 +309,22 @@
     "advancedDesc": "综合任务含配置和脚本",
     "timeLimit": "时限 {{seconds}} 秒",
     "start": "开始挑战",
-    "locked": "通关第 {{chapter}} 章后解锁",
     "timeUp": "时间到！",
     "completed": "挑战完成！",
     "yourTime": "你的用时",
     "commandsUsed": "使用命令数",
     "tryAgain": "再来一次",
     "backToMenu": "返回菜单",
-    "leaderboard": "排行榜",
-    "rank": "排名",
-    "username": "用户名",
-    "date": "挑战时间",
     "time": "用时",
-    "noRecords": "暂无记录，成为第一个挑战者！"
+    "timeLeft": "剩余时间",
+    "goal": "本轮目标",
+    "secondsValue": "{{count}} 秒"
   },
   "reference": {
     "title": "命令手册",
-    "search": "搜索命令...",
-    "copied": "已复制!",
-    "clickToCopy": "点击复制",
+    "search": "按键、命令或说明",
+    "copied": "已复制",
     "popular": "常用",
-    "commandCount": "{{count}} 个命令",
     "categories": {
       "session": "会话管理",
       "window": "窗口管理",
@@ -327,35 +338,97 @@
       "pane": "分屏、导航、调整面板布局",
       "copy": "在面板间复制和粘贴文本",
       "config": "自定义快捷键和 tmux 设置"
-    }
+    },
+    "entries": {
+      "new-session": "新建名为 work 的会话并进入（在 tmux 之外输入）",
+      "attach": "回到已有的会话 work",
+      "list-sessions": "列出所有会话",
+      "detach": "离开当前会话，它会留在后台继续运行",
+      "new-detached": "在后台新建会话 dev，不切换过去",
+      "switch-client": "在 tmux 里切换到会话 dev",
+      "rename-session": "重命名当前会话：输入新名字，按 `Enter` 确认",
+      "kill-session": "关闭会话 dev，连同其中所有窗口",
+      "new-window": "新建一个窗口",
+      "new-window-named": "新建窗口，并直接命名为 logs",
+      "next-window": "切换到下一个窗口",
+      "previous-window": "切换到上一个窗口",
+      "select-window": "按编号直接跳到窗口（这里是 1 号），`0` 到 `9` 都可以",
+      "rename-window": "重命名当前窗口：输入新名字，按 `Enter` 确认",
+      "kill-window": "关闭当前窗口：tmux 会先询问，按 `y` 确认",
+      "move-window": "把会话 utils 里的窗口 tools 移到会话 project",
+      "split-side": "把当前面板分成左右两个",
+      "split-stacked": "把当前面板分成上下两个",
+      "select-pane": "切换到箭头方向上的面板",
+      "next-pane": "依次切换到下一个面板",
+      "kill-pane": "关闭当前面板：tmux 会先询问，按 `y` 确认",
+      "zoom-pane": "放大当前面板占满整个窗口，再按一次还原",
+      "resize-pane": "朝箭头方向调整面板大小，每次 1 格",
+      "resize-pane-5": "朝箭头方向调整面板大小，每次 5 格",
+      "swap-pane": "和上一个（`{`）或下一个（`}`）面板交换位置",
+      "break-pane": "把当前面板拆出来，单独成为一个窗口",
+      "join-pane": "把窗口 temp 里的面板并进窗口 main，左右并排",
+      "next-layout": "在几种预设布局之间轮流切换",
+      "select-layout": "让所有面板左右并排、宽度相同；还可以用 even-vertical、main-horizontal、main-vertical、tiled",
+      "synchronize-panes": "同步输入：输入的命令会同时发到本窗口的所有面板，改成 off 即可关闭",
+      "copy-mode": "进入复制模式，在面板内容里移动光标、选择文字",
+      "copy-move": "复制模式下移动光标（`h` `j` `k` `l` 也可以）",
+      "copy-select": "复制模式下从光标处开始选择",
+      "copy-copy": "复制选中的文字，并退出复制模式",
+      "copy-quit": "不复制，直接退出复制模式",
+      "paste": "把最近复制的文字粘贴到当前面板",
+      "command-prompt": "打开 tmux 命令行，输入命令后按 `Enter`；游戏里也可以直接在命令框输入以 `:` 开头的命令",
+      "prefix": "把前缀键改成 `Ctrl+a`",
+      "bind-key": "绑定快捷键：按前缀键再按 `|` 就左右分屏",
+      "mouse": "开启鼠标：点击面板即可切换，拖动边框调整大小",
+      "status-style": "把状态栏的背景改成蓝色",
+      "status-right": "在状态栏右侧显示时间（时:分）",
+      "edit-conf": "用 vim 编辑 tmux 的配置文件",
+      "source-file": "重新加载配置文件，让改动马上生效",
+      "run-script": "运行脚本 ~/dev.sh，逐行执行其中的命令"
+    },
+    "subtitle": "游戏里能用的所有按键和命令",
+    "searchLabel": "搜索命令",
+    "total_one": "共 {{count}} 条",
+    "total_other": "共 {{count}} 条",
+    "copy": "复制",
+    "copyLabel": "复制 {{text}}",
+    "copyFailed": "复制失败",
+    "noResults": "没有找到与“{{query}}”相关的命令"
   },
   "settings": {
     "title": "设置",
-    "username": "用户名",
     "language": "语言",
-    "sound": "音效",
-    "soundOn": "开启",
-    "soundOff": "关闭",
     "resetProgress": "重置进度",
-    "resetConfirm": "确定要重置所有进度吗？此操作不可撤销。",
-    "confirm": "确定",
-    "cancel": "取消"
+    "resetConfirm": "所有关卡星级和挑战记录都会被清除，而且无法恢复。",
+    "confirm": "全部重置",
+    "cancel": "取消",
+    "languageNames": {
+      "zh": "中文",
+      "en": "English"
+    },
+    "referenceHint": "查看游戏里能用的所有按键和命令",
+    "about": "关于",
+    "version": "版本",
+    "levels": "关卡数",
+    "aboutText": "在模拟终端里闯关，边玩边学 tmux。",
+    "dangerZone": "危险操作",
+    "resetHint": "清除所有关卡星级和挑战记录，无法恢复。",
+    "resetTitle": "重置全部进度？",
+    "resetDone": "进度已清除"
   },
   "common": {
     "back": "返回",
     "close": "关闭",
     "save": "保存",
-    "confirm": "确定",
-    "cancel": "取消",
-    "loading": "加载中..."
+    "starsEarned": "已获得 {{count}} / 3 颗星"
   },
   "errors": {
     "didYouMean": "你是不是想输入：{{command}}？",
     "parse": {
       "unknownCommand": "未知命令：{{command}}",
       "ambiguousCommand": "命令 {{command}} 有歧义，可能是：{{matches}}。请多输入几个字母",
-      "unknownFlag": "未知参数：{{flag}}",
-      "missingArg": "{{flag}} 后面需要跟一个值",
+      "unknownFlag": "{{command}} 命令没有 {{flag}} 这个参数",
+      "missingArg": "{{command}} 命令的 {{flag}} 后面需要跟一个值",
       "tooFewArgs": "{{command}}：参数太少",
       "tooManyArgs": "{{command}}：参数太多（带空格的文字要用引号括起来）",
       "badNumber": "不是有效的数字：{{value}}",
@@ -375,8 +448,9 @@
     "session": {
       "none": "tmux 服务器还没有运行，请先用 tmux new 创建会话",
       "duplicate": "会话 {{name}} 已存在，请换个名字，或用 tmux attach -t {{name}} 连接它",
-      "nested": "你已经在 tmux 里了，不要嵌套会话：加上 -d 在后台创建，或先分离（tmux detach）",
-      "badName": "会话名无效：{{name}}（不能为空，也不能包含 : 或 .）"
+      "nested": "会话不宜嵌套（sessions should be nested with care）：你已经在 tmux 里了。加上 -d 在后台创建，或先分离（tmux detach）",
+      "badName": "会话名无效：{{name}}（不能为空，也不能包含 : 或 .）",
+      "nestedAttach": "会话不宜嵌套（sessions should be nested with care）：你已经在 tmux 里了。要换到别的会话，请用 tmux switch-client -t 会话名"
     },
     "window": {
       "indexInUse": "窗口编号 {{index}} 已被占用，请换一个空闲的编号"
@@ -414,8 +488,14 @@
     "buffer": {
       "empty": "粘贴缓冲区是空的，请先复制一些文字"
     },
-    "copy": {
-      "notInMode": "当前不在复制模式，请先进入复制模式（prefix [）"
-    }
+    "listSeparator": "、"
+  },
+  "terminal": {
+    "prefixBadge": "前缀 {{key}}",
+    "copyMode": "复制模式",
+    "saveHint": "保存并退出",
+    "mouseClick": "鼠标点击",
+    "mouseDrag": "鼠标拖动",
+    "log": "输出记录"
   }
 }

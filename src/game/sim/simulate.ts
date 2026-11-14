@@ -39,6 +39,8 @@ export interface SimulationResult {
 
 type Outcome = Omit<InputResult, 'counted'>
 
+const PROMPT_OPENERS: ReadonlySet<string> = new Set(['command-prompt', 'confirm-before'])
+
 function run(state: TmuxState, input: PlayerInput): Outcome {
   switch (input.type) {
     case 'line': return { ...submitLine(state, input.text, ENGINE), handled: true }
@@ -52,11 +54,11 @@ function run(state: TmuxState, input: PlayerInput): Outcome {
 
 /**
  * An input is one step when it made something happen: it added to the command log. Opening a prompt
- * is not a step (what is typed into it is), and neither is a shell line that only failed, so a typo
- * costs nothing while a line that changed tmux before failing still counts.
+ * or a yes/no question is not a step (what is typed into it is), and neither is a shell line that only
+ * failed, so a typo costs nothing while a line that changed tmux before failing still counts.
  */
 function isStep(added: readonly LogEntry[], ok: boolean): boolean {
-  const ran = added.filter(entry => entry.name !== 'command-prompt')
+  const ran = added.filter(entry => !PROMPT_OPENERS.has(entry.name))
   return ran.some(entry => entry.name !== 'shell') || (ok && ran.length > 0)
 }
 

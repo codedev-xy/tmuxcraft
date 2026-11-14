@@ -8,6 +8,8 @@ import { DEFAULT_PREFIX_BINDINGS } from '../keymap'
 import { getActiveWindow } from '../selectors'
 import type { PromptState, TmuxState } from '../types'
 import { updateWindow } from '../update'
+import { ENGINE as FULL_ENGINE } from '../engine'
+import { findPane } from '../selectors'
 import { errorOf, must, testEngine, TYPED } from './harness'
 import { twoSessionState } from './fixtures'
 
@@ -100,6 +102,32 @@ describe('submitPrompt', () => {
     submitPrompt(state, 'new name', ENGINE)
     cancelPrompt(state)
     expect(state).toEqual(snapshot)
+  })
+})
+
+describe('submitPrompt on a confirm prompt', () => {
+  /** The fixture after the default x binding asked whether to kill pane p1. */
+  function confirmKill(): TmuxState {
+    return must(executeLine(twoSessionState(), DEFAULT_PREFIX_BINDINGS.x, TYPED, FULL_ENGINE)).state
+  }
+
+  it.each(['y', 'Y'])('runs the command on %s', answer => {
+    const result = must(submitPrompt(confirmKill(), answer, FULL_ENGINE))
+    expect(result.state.prompt).toBeNull()
+    expect(findPane(result.state, 'p1')).toBeNull()
+    expect(result.state.log.map(entry => [entry.name, entry.origin])).toEqual([['confirm-before', 'typed'], ['kill-pane', 'typed']])
+  })
+
+  it.each(['n', 'N', '', 'yes', ' y', 'q'])('only closes the prompt on %j', answer => {
+    const state = confirmKill()
+    const result = submitPrompt(state, answer, FULL_ENGINE)
+    expect(result).toEqual({ state: { ...state, prompt: null }, ok: true, output: [], errors: [] })
+    expect(findPane(result.state, 'p1')).not.toBeNull()
+  })
+
+  it('runs the command as written, without filling in %%', () => {
+    const state = withPrompt({ label: '?', initial: '', template: "rename-window '%%'", confirm: true })
+    expect(windowName(must(submitPrompt(state, 'y', ENGINE)).state)).toBe('%%')
   })
 })
 

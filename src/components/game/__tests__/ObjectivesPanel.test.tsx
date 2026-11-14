@@ -43,17 +43,17 @@ const TEXT = {
   step2: 'Press `Ctrl+b "`',
 }
 
-function show(level: LevelDefinition, inputs = 0) {
+function show(level: LevelDefinition, inputs = 0, commands = inputs / 2) {
   const state = simulate(level.initialState, level.solution.slice(0, inputs)).state
   render(
     <ObjectivesPanel
       currentLevel={level}
       state={state}
       validation={validateLevel(state, level)}
-      commandCount={inputs / 2}
-      objectiveFlash={false}
-      efficiency={100}
-      optimalSteps={level.optimalSteps}
+      commandCount={commands}
+      hintsUsed={0}
+      onRevealHint={() => {}}
+      isComplete={false}
     />,
   )
   const list = screen.queryByRole('list', { name: i18n.t('game.walkthrough') })
@@ -100,5 +100,39 @@ describe('ObjectivesPanel walk-through', () => {
     expect(within(steps[0]).getByText('Ctrl+b %').tagName).toBe('KBD')
     const objective = screen.getAllByText(/Have 3 panes/)[0]
     expect(within(objective).getByText('Ctrl+b "').tagName).toBe('KBD')
+  })
+})
+
+describe('ObjectivesPanel objectives and stats', () => {
+  const objective = () => within(screen.getByRole('list', { name: i18n.t('game.taskObjectives') })).getAllByRole('listitem')[0]
+
+  it('says in words whether each objective is done', () => {
+    show(LEVEL)
+    expect(objective()).toHaveTextContent(i18n.t('game.objectiveTodo'))
+    expect(objective()).toHaveAttribute('data-done', 'false')
+  })
+
+  it('marks an objective done once the state meets it', () => {
+    show(LEVEL, 4)
+    expect(objective()).toHaveTextContent(i18n.t('game.objectiveDone'))
+    expect(objective()).toHaveAttribute('data-done', 'true')
+  })
+
+  it('shows the level description', () => {
+    show(LEVEL)
+    expect(screen.getByText(TEXT.description)).toBeInTheDocument()
+  })
+
+  it('shows commands used, the optimal count and how much of the efficient budget is left', () => {
+    show(LEVEL, 2)
+    const stats = screen.getByRole('group', { name: i18n.t('game.stats') })
+    expect(within(stats).getByText(i18n.t('game.commands')).parentElement).toHaveTextContent('1')
+    expect(within(stats).getByText(i18n.t('game.optimal')).parentElement).toHaveTextContent('2')
+    expect(within(stats).getByText(i18n.t('game.budgetLeft', { count: 2 }))).toBeInTheDocument()
+  })
+
+  it('says when the efficient budget is spent', () => {
+    show({ ...LEVEL, optimalSteps: 1 }, 4, 3)
+    expect(screen.getByText(i18n.t('game.budgetMissed'))).toBeInTheDocument()
   })
 })

@@ -4,22 +4,23 @@ export const ERROR_CODES = [
   'command.unsupported', 'state.detached',
   // Sessions, windows, panes, layouts.
   'target.sessionNotFound', 'target.windowNotFound', 'target.paneNotFound',
-  'session.none', 'session.duplicate', 'session.nested', 'session.badName',
+  'session.none', 'session.duplicate', 'session.nested', 'session.nestedAttach', 'session.badName',
   'window.indexInUse',
   'pane.onlyOne', 'pane.same', 'pane.noSpace',
   'layout.unknown',
   // Options, keys, prompt.
   'option.unknown', 'option.unsupported', 'option.badValue',
   'key.invalid', 'key.reserved', 'key.unbound', 'key.tableUnsupported',
-  // Files, scripts, shell, buffers, copy mode.
+  // Files, scripts, shell, buffers.
   'file.notFound', 'script.depth',
   'shell.commandNotFound', 'shell.unsupported', 'shell.missingOperand',
-  'buffer.empty', 'copy.notInMode',
+  'buffer.empty',
 ] as const
 
 export type ErrorCode = typeof ERROR_CODES[number]
 
-export type ErrorParams = Readonly<Record<string, string | number>>
+/** A list param (`matches`) is joined by the UI in the reader's language. */
+export type ErrorParams = Readonly<Record<string, string | number | readonly string[]>>
 
 /** An error the UI translates through `errors.<code>`; core never produces user-facing prose. */
 export interface TmuxError {

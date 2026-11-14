@@ -190,8 +190,8 @@ describe('executeLine', () => {
   })
 
   it('reports an unknown flag and a flag missing its value', () => {
-    expect(run('set-buffer -x hello').errors).toEqual([{ code: 'parse.unknownFlag', params: { flag: '-x' } }])
-    expect(run('set-buffer -b').errors).toEqual([{ code: 'parse.missingArg', params: { flag: '-b' } }])
+    expect(run('set-buffer -x hello').errors).toEqual([{ code: 'parse.unknownFlag', params: { flag: '-x', command: 'set-buffer' } }])
+    expect(run('set-buffer -b').errors).toEqual([{ code: 'parse.missingArg', params: { flag: '-b', command: 'set-buffer' } }])
   })
 
   it('reports too few and too many arguments, naming the command', () => {

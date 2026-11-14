@@ -32,7 +32,7 @@ function runCommand(state: TmuxState, words: readonly string[], ctx: ExecContext
   if (!found.ok) return failed(state, found.error)
   const spec = found.value
   const args = parseArgs(words.slice(1), spec.flags)
-  if (!args.ok) return failed(state, args.error)
+  if (!args.ok) return failed(state, { ...args.error, params: { ...args.error.params, command: spec.name } })
   const countError = argCountError(spec, args.value.positional.length)
   if (countError) return failed(state, countError)
   if (spec.requiresServer && state.sessions.length === 0) return failed(state, { code: 'session.none' })

@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { MotionConfig } from 'framer-motion'
 import { useGameStore } from '@/store/game-store'
 import { HomeScreen } from '@/components/screens/HomeScreen'
 
@@ -36,7 +37,11 @@ function App() {
     }
   })()
 
-  return <Suspense fallback={null}>{screen}</Suspense>
+  return (
+    <MotionConfig reducedMotion="user">
+      <Suspense fallback={null}>{screen}</Suspense>
+    </MotionConfig>
+  )
 }
 
 export default App

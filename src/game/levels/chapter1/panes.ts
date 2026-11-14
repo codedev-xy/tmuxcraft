@@ -1,7 +1,7 @@
 import { findPane, getActiveWindow, windowPanes } from '@/core/selectors'
 import type { TmuxState, Window } from '@/core/types'
 import type { LevelDefinition } from '@/game/level-types'
-import { keys, line } from '@/game/sim/inputs'
+import { keys, line, prompt } from '@/game/sim/inputs'
 import { hasPanes, isGrid, ran } from '../predicates'
 import { makeSession, makeState, makeWindow, paneNode, singlePaneState, split } from '../helpers'
 import { activePaneIs, focusedAmong, hasSplit } from './checks'
@@ -114,7 +114,7 @@ const level1_4: LevelDefinition = {
   ],
   hints: ['game.hints.1-4-1', 'game.hints.1-4-2', 'game.hints.1-4-3'],
   optimalSteps: 2,
-  solution: keys('C-b', 'Right', 'C-b', 'x'),
+  solution: [...keys('C-b', 'Right', 'C-b', 'x'), prompt('y')],
   tutorialSteps: [
     { messageKey: 'game.tutorial.1-4-step1', done: state => activePaneIs(state, 'p2') || p2Closed(state) },
     { messageKey: 'game.tutorial.1-4-step2', done: p2Closed },

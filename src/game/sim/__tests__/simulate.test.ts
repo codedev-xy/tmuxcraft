@@ -99,6 +99,24 @@ describe('keys', () => {
     expect(closed.state.prompt).toBeNull()
   })
 
+  it('counts a confirmed kill as one step, and neither the question nor a no', () => {
+    const asked = simulate(defaultState(), [line(':split-window'), ...keys('C-b', 'x')])
+    expect(asked.steps).toBe(1)
+    expect(asked.state.prompt).toMatchObject({ confirm: true })
+    const declined = applyInput(asked.state, { type: 'prompt', text: 'n' })
+    expect(declined).toMatchObject({ ok: true, handled: true, counted: false })
+    expect(panes(declined.state)).toBe(2)
+    const confirmed = applyInput(asked.state, { type: 'prompt', text: 'y' })
+    expect(confirmed).toMatchObject({ ok: true, handled: true, counted: true })
+    expect(panes(confirmed.state)).toBe(1)
+  })
+
+  it('does not count confirm-before typed at the : prompt until it is answered', () => {
+    const run = simulate(defaultState(), [line(':split-window'), line(':confirm-before kill-pane'), { type: 'prompt', text: 'y' }])
+    expect(run.results.map(result => result.counted)).toEqual([true, false, true])
+    expect(panes(run.state)).toBe(1)
+  })
+
   it('counts copying, not moving the cursor', () => {
     const start = appendPaneLines(defaultState(), 'p1', ['hello world'])
     const run = simulate(start, keys('C-b', '[', '0', 'Space', '$', 'Enter'))

@@ -51,9 +51,24 @@ describe('reduceKey', () => {
     expect(pasted.log.map(entry => entry.name)).toEqual(['copy-mode', 'copy-selection', 'select-pane', 'paste-buffer'])
   })
 
-  it('swallows unbound keys in copy mode instead of passing them on', () => {
-    const copying = press(withText(), 'C-b', '[')
+  it('swallows plain keys in copy mode instead of passing them to the shell', () => {
+    const copying = press(withText(), 'C-b', '[', 'Right')
+    for (const key of ['a', 'x', '%', 'Space', 'Enter', 'Escape']) {
+      expect(reduceKey(copying, key, ENGINE).handled, key).toBe(true)
+    }
     expect(reduceKey(copying, 'a', ENGINE)).toMatchObject({ handled: true, state: copying })
+  })
+
+  it('takes modified keys that copy mode has an action for', () => {
+    const copying = press(withText(), 'C-b', '[', 'C-Space', 'Right', 'M-w')
+    expect(copying.clipboard).toBe('he')
+  })
+
+  it('passes on Tab and Ctrl or Alt keys copy mode has no action for, and stays in copy mode', () => {
+    const copying = press(withText(), 'C-b', '[', 'Right')
+    for (const key of ['Tab', 'C-r', 'C-l', 'M-x', 'C-M-a', 'S-Tab']) {
+      expect(reduceKey(copying, key, ENGINE), key).toMatchObject({ handled: false, state: copying })
+    }
   })
 
   it('does not run root bindings in copy mode', () => {
@@ -89,6 +104,14 @@ describe('reduceKey', () => {
     const result = reduceKey(press(twoSessionState(), 'C-b'), 'Q', ENGINE)
     expect(result).toMatchObject({ handled: true, ok: false, errors: [{ code: 'key.unbound', params: { key: 'Q' } }] })
     expect(result.state.prefixPending).toBe(false)
+  })
+
+  it('leaves every key to the confirm prompt while it asks', () => {
+    const asking = press(twoSessionState(), 'C-b', 'x')
+    expect(asking.prompt?.confirm).toBe(true)
+    for (const key of ['y', 'n', 'C-b', 'x', 'Escape']) {
+      expect(reduceKey(asking, key, ENGINE)).toMatchObject({ handled: false, state: asking })
+    }
   })
 
   it('takes no keys while detached, in the prompt, or in the editor', () => {

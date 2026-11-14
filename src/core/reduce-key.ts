@@ -14,11 +14,12 @@ function copyModeHasKeys(state: TmuxState): boolean {
 
 /**
  * Every key the player presses goes through here. The prefix and the key after it always belong to
- * tmux; otherwise copy mode takes every key in place of the root table, as tmux's copy-mode table does.
- * A result that is not `handled` is for the caller to pass on (to the shell line, the prompt, the editor).
+ * tmux; otherwise copy mode replaces the root table, as tmux's copy-mode table does, and keys it does
+ * not take go back unhandled. A result that is not `handled` is for the caller to pass on (to the shell
+ * line, the prompt, the editor, the browser).
  */
 export function reduceKey(state: TmuxState, key: KeyId, engine: Engine): KeyResult {
   const forPrefix = state.prefixPending || key === getOption(state, 'prefix')
   if (forPrefix || !copyModeHasKeys(state)) return handleKey(state, key, engine)
-  return { state: copyModeKey(state, key).state, ok: true, output: [], errors: [], handled: true }
+  return { ...copyModeKey(state, key), ok: true, output: [], errors: [] }
 }

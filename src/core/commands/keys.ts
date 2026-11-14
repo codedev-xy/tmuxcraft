@@ -163,4 +163,35 @@ const commandPrompt: CommandSpec = {
   },
 }
 
-export const KEY_COMMANDS: readonly CommandSpec[] = [bindKey, unbindKey, listKeys, sendPrefix, displayMessage, commandPrompt]
+/** The command a confirm prompt asks about, checked now so a typo fails before anything is asked. */
+function confirmedCommand(line: string, table: readonly CommandSpec[]): Result<string> {
+  const tokens = tokenize(line)
+  if (!tokens.ok) return tokens
+  const first = splitCommands(tokens.value)[0]
+  if (first === undefined) return fail('parse.tooFewArgs', { command: 'confirm-before' })
+  const found = findCommand(first[0], table)
+  return found.ok ? ok(found.value.name) : found
+}
+
+const confirmBefore: CommandSpec = {
+  name: 'confirm-before',
+  aliases: ['confirm'],
+  flags: { p: 'value' },
+  minArgs: 1,
+  maxArgs: 1,
+  requiresServer: true,
+  run: (state, args, ctx) => {
+    if (state.isDetached) return fail('state.detached')
+    const template = args.positional[0]
+    const command = confirmedCommand(template, ctx.commands)
+    if (!command.ok) return command
+    const given = flagValue(args, 'p')
+    const label = given === undefined ? `Confirm '${command.value}'? (y/n)` : expandNames(state, given)
+    const prompt = { label, initial: '', template, confirm: true }
+    return ok({ state: { ...state, prompt }, detail: { command: template } })
+  },
+}
+
+export const KEY_COMMANDS: readonly CommandSpec[] = [
+  bindKey, unbindKey, listKeys, sendPrefix, displayMessage, commandPrompt, confirmBefore,
+]

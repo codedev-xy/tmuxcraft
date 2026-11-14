@@ -1,31 +1,10 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { act, fireEvent, screen } from '@testing-library/react'
 import i18n from '@/i18n'
 import { formatError } from '@/i18n/format-error'
 import { defaultState, emptyState } from '@/core/state'
-import type { TmuxState } from '@/core/types'
-import type { InputResult } from '@/game/sim/simulate'
-import { simulate } from '@/game/sim/simulate'
-import { useTmuxSession } from '@/hooks/useTmuxSession'
-import { PREFIX_TIMEOUT_MS, TerminalView } from '../TerminalView'
-
-function Harness({ initial, onResult, disabled }: { initial: TmuxState; onResult?: (result: InputResult) => void; disabled?: boolean }) {
-  const session = useTmuxSession(initial)
-  return <TerminalView session={session} onResult={onResult} disabled={disabled} />
-}
-
-function open(initial: TmuxState = defaultState(), disabled = false) {
-  const onResult = vi.fn<(result: InputResult) => void>()
-  const view = render(<Harness initial={initial} onResult={onResult} disabled={disabled} />)
-  const panes = () => Array.from(view.container.querySelectorAll<HTMLElement>('[data-pane-id]'))
-  const activePane = () => view.container.querySelector<HTMLElement>('[data-pane-id][data-active="true"]')?.dataset.paneId
-  const lastResult = () => onResult.mock.calls.at(-1)![0]
-  return { user: userEvent.setup(), onResult, panes, activePane, lastResult, commandBox: () => screen.getByRole<HTMLInputElement>('textbox', { name: 'command' }) }
-}
-
-const afterLines = (...lines: string[]): TmuxState =>
-  simulate(defaultState(), lines.map(text => ({ type: 'line', text }))).state
+import { PREFIX_TIMEOUT_MS } from '../TerminalView'
+import { afterLines, openTerminal as open } from './terminal-harness'
 
 beforeAll(() => i18n.changeLanguage('en'))
 afterEach(() => vi.useRealTimers())
@@ -60,20 +39,20 @@ describe('TerminalView', () => {
     const { user, panes, commandBox } = open()
     await user.click(commandBox())
     await user.keyboard('{Control>}b{/Control}')
-    expect(screen.getByText('PREFIX')).toBeInTheDocument()
+    expect(screen.getByText('Prefix Ctrl+b')).toBeInTheDocument()
     await user.keyboard('%')
     expect(panes()).toHaveLength(2)
     expect(commandBox()).toHaveValue('')
-    expect(screen.queryByText('PREFIX')).not.toBeInTheDocument()
+    expect(screen.queryByText('Prefix Ctrl+b')).not.toBeInTheDocument()
   })
 
   it('drops a prefix that is not followed up', () => {
     vi.useFakeTimers()
     const { panes } = open()
     fireEvent.keyDown(document.body, { key: 'b', ctrlKey: true })
-    expect(screen.getByText('PREFIX')).toBeInTheDocument()
+    expect(screen.getByText('Prefix Ctrl+b')).toBeInTheDocument()
     act(() => { vi.advanceTimersByTime(PREFIX_TIMEOUT_MS) })
-    expect(screen.queryByText('PREFIX')).not.toBeInTheDocument()
+    expect(screen.queryByText('Prefix Ctrl+b')).not.toBeInTheDocument()
     fireEvent.keyDown(document.body, { key: '%' })
     expect(panes()).toHaveLength(1)
   })
@@ -178,9 +157,9 @@ describe('TerminalView', () => {
     const { user, commandBox } = open()
     await user.click(commandBox())
     await user.keyboard('{Control>}b{/Control}[[')
-    expect(screen.getByText('COPY')).toBeInTheDocument()
+    expect(screen.getByText('Copy mode')).toBeInTheDocument()
     await user.keyboard('q')
-    expect(screen.queryByText('COPY')).not.toBeInTheDocument()
+    expect(screen.queryByText('Copy mode')).not.toBeInTheDocument()
     expect(commandBox()).toHaveValue('')
   })
 

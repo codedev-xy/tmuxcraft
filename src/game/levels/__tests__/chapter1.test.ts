@@ -4,6 +4,9 @@ import { keys, line, prompt } from '@/game/sim/inputs'
 import { paneIds } from '../predicates'
 import { completes, levelById, met, play } from './level-kit'
 
+/** `Ctrl+b x`, then `y` when tmux asks. */
+const killPane = () => [...keys('C-b', 'x'), prompt('y')]
+
 // Easy ways through chapter 1 that must not complete a level, and fair routes that must.
 
 describe('1-1 meet tmux', () => {
@@ -37,7 +40,7 @@ describe('1-2 splits', () => {
   })
 
   it('is not done when a pane is closed again', () => {
-    expect(completes(level, keys('C-b', '%', 'C-b', '"', 'C-b', 'x'))).toBe(false)
+    expect(completes(level, [...keys('C-b', '%', 'C-b', '"'), ...killPane()])).toBe(false)
   })
 
   it('is done by either order, with keys or typed commands', () => {
@@ -50,7 +53,7 @@ describe('1-3 pane navigation', () => {
   const level = levelById('1-3')
 
   it('is not done by closing panes until the target is the active one', () => {
-    const inputs = keys('C-b', 'x', 'C-b', 'x', 'C-b', 'x')
+    const inputs = [...killPane(), ...killPane(), ...killPane()]
     expect(getActiveWindow(play(level, inputs))?.activePaneId).toBe('p4')
     expect(completes(level, inputs)).toBe(false)
   })
@@ -70,13 +73,17 @@ describe('1-4 close a pane', () => {
   const level = levelById('1-4')
 
   it('is not done by closing the pane that has focus at the start', () => {
-    expect(completes(level, keys('C-b', 'x'))).toBe(false)
+    expect(completes(level, killPane())).toBe(false)
     expect(completes(level, [line('exit')])).toBe(false)
     expect(completes(level, [line(':kill-pane')])).toBe(false)
   })
 
   it('is not done by closing the wrong pane on the right', () => {
-    expect(completes(level, keys('C-b', 'Right', 'C-b', 'Down', 'C-b', 'x'))).toBe(false)
+    expect(completes(level, [...keys('C-b', 'Right', 'C-b', 'Down'), ...killPane()])).toBe(false)
+  })
+
+  it('is not done when the player answers no', () => {
+    expect(completes(level, [...keys('C-b', 'Right', 'C-b', 'x'), prompt('n')])).toBe(false)
   })
 
   it('is not done by moving the pane to its own window instead of closing it', () => {
@@ -162,7 +169,7 @@ describe('1-8 switch windows', () => {
   })
 
   it('is not done by closing windows until gamma is the current one', () => {
-    const inputs = keys('C-b', '&', 'C-b', '&')
+    const inputs = [...keys('C-b', '&'), prompt('y'), ...keys('C-b', '&'), prompt('y')]
     expect(getActiveWindow(play(level, inputs))?.name).toBe('gamma')
     expect(completes(level, inputs)).toBe(false)
   })

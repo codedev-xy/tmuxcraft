@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { selectionRange } from '@/core/copy-mode'
 import { closeEditor, readFile } from '@/core/files'
 import { cancelPrefix } from '@/core/key-handler'
-import { getOption } from '@/core/options'
+import { getOption, isOn } from '@/core/options'
 import { cancelPrompt } from '@/core/prompt'
 import { getActiveWindow } from '@/core/selectors'
 import type { KeyId, TmuxState } from '@/core/types'
@@ -13,6 +13,7 @@ import { CommandLine } from './CommandLine'
 import { FileEditor } from './FileEditor'
 import { OutputLog } from './OutputLog'
 import { PaneRenderer } from './PaneRenderer'
+import type { DragInput } from './pane-drag'
 import { PromptLine } from './PromptLine'
 import { TmuxStatusBar } from './TmuxStatusBar'
 
@@ -27,9 +28,45 @@ interface TerminalViewProps {
   disabled?: boolean
 }
 
+interface ScreenProps {
+  state: TmuxState
+  play: (input: PlayerInput) => InputResult
+  update: TmuxSession['update']
+  onPaneClick?: (paneId: string) => void
+  onDrag?: (drag: DragInput) => void
+}
+
 function fileText(state: TmuxState, path: string): string {
   const file = readFile(state, path)
   return file.ok ? file.value : ''
+}
+
+/** What fills the terminal: the editor, the panes of the current window, or the shell outside tmux. */
+function TerminalScreen({ state, play, update, onPaneClick, onDrag }: ScreenProps) {
+  const { editing } = state
+  if (editing !== null) {
+    return (
+      <FileEditor
+        key={editing}
+        path={editing}
+        initialText={fileText(state, editing)}
+        onSave={text => play({ type: 'save', path: editing, text })}
+        onClose={() => update(closeEditor)}
+      />
+    )
+  }
+  const window = state.isDetached ? null : getActiveWindow(state)
+  if (!window) return <PaneRenderer tree={{ type: 'pane', pane: state.outer }} activePaneId={state.outer.id} />
+  return (
+    <PaneRenderer
+      tree={window.layoutTree}
+      activePaneId={window.activePaneId}
+      zoomed={window.zoomed}
+      copy={state.copyMode && { mode: state.copyMode, range: selectionRange(state) }}
+      onPaneClick={onPaneClick}
+      onDrag={onDrag}
+    />
+  )
 }
 
 /** The simulated terminal: panes (or the editor), status line, tmux prompt, log and command box. */
@@ -59,37 +96,24 @@ export function TerminalView({ session, onResult, disabled = false }: TerminalVi
 
   const clickPane = (paneId: string) => {
     play({ type: 'click', paneId })
-    inputRef.current?.focus()
+    if (!modalOpen) inputRef.current?.focus()
   }
+  const dragBorder = (drag: DragInput) => play({ type: 'drag', ...drag })
 
-  const window = state.isDetached ? null : getActiveWindow(state)
-  const editing = state.editing
   const statusBar = <TmuxStatusBar state={state} />
   const statusOnTop = getOption(state, 'status-position') === 'top'
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="on-dark flex h-full min-h-0 flex-col bg-term-bg">
       {statusOnTop && statusBar}
-      <div className="relative min-h-0 flex-1" style={{ padding: '8px' }}>
-        {editing !== null ? (
-          <FileEditor
-            key={editing}
-            path={editing}
-            initialText={fileText(state, editing)}
-            onSave={text => play({ type: 'save', path: editing, text })}
-            onClose={() => update(closeEditor)}
-          />
-        ) : window ? (
-          <PaneRenderer
-            tree={window.layoutTree}
-            activePaneId={window.activePaneId}
-            zoomed={window.zoomed}
-            copy={state.copyMode && { mode: state.copyMode, range: selectionRange(state) }}
-            onPaneClick={disabled ? undefined : clickPane}
-          />
-        ) : (
-          <PaneRenderer tree={{ type: 'pane', pane: state.outer }} activePaneId={state.outer.id} />
-        )}
+      <div className="relative min-h-0 flex-1 p-2">
+        <TerminalScreen
+          state={state}
+          play={play}
+          update={update}
+          onPaneClick={disabled ? undefined : clickPane}
+          onDrag={disabled || !isOn(state, 'mouse') ? undefined : dragBorder}
+        />
       </div>
       {!statusOnTop && statusBar}
       {state.prompt && (
@@ -104,7 +128,7 @@ export function TerminalView({ session, onResult, disabled = false }: TerminalVi
       <CommandLine
         inputRef={inputRef}
         disabled={disabled}
-        prefixPending={state.prefixPending}
+        pendingPrefix={state.prefixPending ? getOption(state, 'prefix') : null}
         onSubmit={text => play({ type: 'line', text })}
       />
     </div>

@@ -39,9 +39,22 @@ describe('copyModeKey movement', () => {
     expect(copyModeKey(state, 'k')).toEqual({ state, handled: false })
   })
 
-  it('handles unknown keys by doing nothing', () => {
+  it('swallows plain keys it has no action for, as tmux does', () => {
     const state = copying()
-    expect(copyModeKey(state, 'x')).toEqual({ state, handled: true })
+    for (const key of ['x', 'Z', '%', '7']) expect(copyModeKey(state, key)).toEqual({ state, handled: true })
+  })
+
+  it('does not take Tab or Ctrl / Alt / Shift keys it has no action for', () => {
+    const state = copying()
+    for (const key of ['Tab', 'C-r', 'C-l', 'M-x', 'M-Left', 'S-Up', 'PageUp']) {
+      expect(copyModeKey(state, key), key).toEqual({ state, handled: false })
+    }
+  })
+
+  it('moves with Home, End and BSpace as tmux does', () => {
+    expect(cursorAfter(['g', 'End'])).toEqual({ row: 0, col: 9 })
+    expect(cursorAfter(['g', 'End', 'BSpace', 'Home'])).toEqual({ row: 0, col: 0 })
+    expect(cursorAfter(['g', 'End', 'BSpace'])).toEqual({ row: 0, col: 8 })
   })
 
   it('moves with arrows and hjkl', () => {

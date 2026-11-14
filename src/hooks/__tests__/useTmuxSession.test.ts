@@ -67,6 +67,22 @@ describe('useTmuxSession', () => {
     expect(session().transcript[0]).toMatchObject({ kind: 'error', error: { code: 'key.unbound' } })
   })
 
+  it('records the command a key ran before what it printed', () => {
+    const { send, session } = start()
+    send(key('C-b'), key('?'))
+    const transcript = session().transcript
+    expect(transcript[0]).toEqual({ kind: 'command', source: { type: 'key', keys: ['C-b', '?'] }, command: 'list-keys' })
+    expect(transcript.length).toBeGreaterThan(1)
+    expect(transcript.slice(1).every(entry => entry.kind === 'output')).toBe(true)
+  })
+
+  it('records nothing for a key that only opens a prompt', () => {
+    const { send, session } = start()
+    send(key('C-b'), key(':'))
+    expect(session().state.prompt).not.toBeNull()
+    expect(session().transcript).toEqual([])
+  })
+
   it('lets the UI change the state without it being an input', () => {
     const { hook, send, session } = start()
     send(key('C-b'), key(','))

@@ -42,7 +42,7 @@ const attachSession: CommandSpec = {
   flags: { d: 'bool', t: 'value' },
   requiresServer: true,
   run: (state, args, ctx) => {
-    if (ctx.fromShell && !state.isDetached) return fail('session.nested')
+    if (ctx.fromShell && !state.isDetached) return fail('session.nestedAttach')
     const target = resolveClientTarget(state, flagValue(args, 't'))
     if (!target.ok) return target
     return ok({ state: attachClient(state, target.value), detail: { session: target.value.session.name } })

@@ -161,7 +161,7 @@ describe('attach-session', () => {
   })
 
   it('refuses to nest from a shell inside tmux', () => {
-    expect(errorOf(shell(twoSessionState(), 'attach -t staging'))).toEqual({ code: 'session.nested' })
+    expect(errorOf(shell(twoSessionState(), 'attach -t staging'))).toEqual({ code: 'session.nestedAttach' })
   })
 
   it('inside tmux switches the client', () => {

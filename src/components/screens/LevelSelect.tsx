@@ -1,325 +1,81 @@
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import { Card } from '@/components/ui/Card'
+import { PageBackground } from '@/components/ui/PageBackground'
+import { Pill } from '@/components/ui/Pill'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { STARS_PER_LEVEL, chapterStars, completedCount, nextUnfinished } from '@/game/chapters'
+import type { Chapter, ProgressMap } from '@/game/chapters'
 import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
-import { chapter1Levels } from '@/game/levels/chapter1'
-import { chapter2Levels } from '@/game/levels/chapter2'
-import { chapter3Levels } from '@/game/levels/chapter3'
+import { CHAPTER_EMOJI, chapterById, chapterDescriptionKey, chapterTitleKey } from './chapter-meta'
+import { LevelCard } from './LevelCard'
+import { ProgressSummary } from './ProgressSummary'
 
-const CHAPTER_META: Record<number, { emoji: string; color: string; gradient: string; lightBg: string }> = {
-  1: { emoji: '\u{1F331}', color: '#0ea5e9', gradient: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)', lightBg: '#f0f9ff' },
-  2: { emoji: '\u26A1', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)', lightBg: '#f5f3ff' },
-  3: { emoji: '\u{1F3A8}', color: '#ec4899', gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', lightBg: '#fdf2f8' },
+function ChapterSummary({ chapter, progress }: { chapter: Chapter; progress: ProgressMap }) {
+  const { t } = useTranslation()
+  const total = chapter.levels.length
+  const completed = completedCount(progress, chapter.id)
+  return (
+    <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
+      <ProgressSummary
+        className="flex-1"
+        completed={completed}
+        total={total}
+        stars={chapterStars(progress, chapter.id)}
+        maxStars={total * STARS_PER_LEVEL}
+        label={t('chapters.progressLabel', { title: t(chapterTitleKey(chapter.id)) })}
+      />
+      {completed === total && (
+        <Pill tone="success" solid className="self-start sm:self-center">
+          <span aria-hidden="true">✓</span>
+          {t('chapters.cleared')}
+        </Pill>
+      )}
+    </Card>
+  )
 }
 
 export function LevelSelect() {
   const { t } = useTranslation()
-  const { currentChapter, setScreen, startLevel } = useGameStore()
-  const { levelProgress, getChapterProgress } = useProgressStore()
-
-  const levels = currentChapter === 1 ? chapter1Levels : currentChapter === 2 ? chapter2Levels : chapter3Levels
-  const progress = getChapterProgress(currentChapter)
-  const pct = Math.round((progress.completed / progress.total) * 100)
-  const meta = CHAPTER_META[currentChapter]
-
-  const totalStars = Object.entries(levelProgress).reduce((sum, [id, prog]) => {
-    const [ch] = id.split('-')
-    if (parseInt(ch) !== currentChapter) return sum
-    return sum + (prog.stars.completed ? 1 : 0) + (prog.stars.efficient ? 1 : 0) + (prog.stars.noHints ? 1 : 0)
-  }, 0)
-  const maxStars = levels.length * 3
+  const currentChapter = useGameStore(s => s.currentChapter)
+  const setScreen = useGameStore(s => s.setScreen)
+  const startLevel = useGameStore(s => s.startLevel)
+  const levelProgress = useProgressStore(s => s.levelProgress)
+  const chapter = chapterById(currentChapter)
+  const next = nextUnfinished(levelProgress, chapter.id)
 
   return (
-    <div className="flex flex-col h-screen relative overflow-hidden" style={{ background: '#f0f4ff' }}>
-      {/* Header bar */}
-      <div
-        className="flex items-center gap-4 shrink-0 relative z-10 glass"
-        style={{
-          padding: '16px 24px',
-          borderBottom: '1px solid rgba(226,232,240,0.8)',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-        }}
-      >
-        <button
-          onClick={() => setScreen('chapter-select')}
-          className="font-[family-name:var(--font-ui)] font-semibold text-sm cursor-pointer transition-all"
-          style={{
-            padding: '8px 16px',
-            borderRadius: '10px',
-            background: '#ffffff',
-            color: '#64748b',
-            border: '1px solid #e2e8f0',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = '#cbd5e1'
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = '#e2e8f0'
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        >
-          &larr; {t('common.back')}
-        </button>
-        <h1
-          className="font-[family-name:var(--font-pixel)] text-xl"
-          style={{ color: meta.color }}
-        >
-          {meta.emoji} {t(`chapters.chapter${currentChapter}.title`)}
-        </h1>
-      </div>
-
-      {/* Two-panel layout */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left sidebar */}
-        <div
-          className="lg:w-[28%] shrink-0 flex flex-col items-center justify-center relative overflow-hidden"
-          style={{
-            padding: '24px',
-            background: `linear-gradient(180deg, #ffffff 0%, ${meta.lightBg} 100%)`,
-            borderRight: '1px solid #e2e8f0',
-            boxShadow: '2px 0 12px rgba(0,0,0,0.04)',
-          }}
-        >
-          {/* Decorative colored circle, top-left */}
-          <div
-            className="absolute rounded-full"
-            style={{
-              top: '-40px',
-              left: '-40px',
-              width: '160px',
-              height: '160px',
-              background: `radial-gradient(circle, ${meta.color}15 0%, transparent 70%)`,
-            }}
-          />
-          {/* Decorative colored circle, bottom-right */}
-          <div
-            className="absolute rounded-full"
-            style={{
-              bottom: '-32px',
-              right: '-32px',
-              width: '128px',
-              height: '128px',
-              background: `radial-gradient(circle, ${meta.color}10 0%, transparent 70%)`,
-            }}
-          />
-
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-center w-full max-w-xs relative z-10"
-          >
-            {/* Chapter emoji */}
-            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>{meta.emoji}</div>
-
-            {/* Chapter number badge */}
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto font-[family-name:var(--font-pixel)] text-2xl font-bold text-white"
-              style={{
-                marginBottom: '16px',
-                background: meta.gradient,
-                boxShadow: `0 4px 16px ${meta.color}33`,
-              }}
-            >
-              {currentChapter}
-            </div>
-
-            {/* Chapter title */}
-            <h2
-              className="font-[family-name:var(--font-pixel)] text-lg font-bold"
-              style={{
-                marginBottom: '12px',
-                color: meta.color,
-              }}
-            >
-              {t(`chapters.chapter${currentChapter}.title`)}
-            </h2>
-
-            {/* Chapter description */}
-            <p
-              className="text-base font-[family-name:var(--font-ui)] leading-relaxed"
-              style={{ marginBottom: '24px', color: '#64748b' }}
-            >
-              {t(`chapters.chapter${currentChapter}.description`)}
-            </p>
-
-            {/* Stars count */}
-            <div
-              className="flex items-center justify-center gap-2"
-              style={{ marginBottom: '20px' }}
-            >
-              <span className="text-lg" style={{ color: '#f59e0b' }}>
-                {'\u2B50'}
-              </span>
-              <span
-                className="font-[family-name:var(--font-pixel)] text-sm font-bold"
-                style={{ color: '#f59e0b' }}
+    <PageBackground chapter={chapter.id}>
+      <ScreenHeader
+        title={t(chapterTitleKey(chapter.id))}
+        subtitle={t(chapterDescriptionKey(chapter.id))}
+        icon={CHAPTER_EMOJI[chapter.id]}
+        onBack={() => setScreen('chapter-select')}
+      />
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-4 sm:p-6">
+          <ChapterSummary chapter={chapter} progress={levelProgress} />
+          <h2 className="font-display text-base font-bold text-ink-soft">{t('levels.select')}</h2>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {chapter.levels.map((level, index) => (
+              <motion.li
+                key={level.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03, type: 'spring', stiffness: 160, damping: 18 }}
               >
-                {totalStars}
-              </span>
-              <span
-                className="font-[family-name:var(--font-ui)] text-sm"
-                style={{ color: '#94a3b8' }}
-              >
-                / {maxStars}
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            <div className="w-full">
-              <div
-                className="flex justify-between text-xs font-[family-name:var(--font-ui)] font-semibold"
-                style={{ marginBottom: '6px', color: '#64748b' }}
-              >
-                <span>{t('chapters.progress', { completed: progress.completed, total: progress.total })}</span>
-                <span style={{ color: meta.color }}>{pct}%</span>
-              </div>
-              <div
-                className="overflow-hidden"
-                style={{
-                  height: '14px',
-                  borderRadius: '9999px',
-                  background: '#e2e8f0',
-                }}
-              >
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{
-                    width: `${pct}%`,
-                    borderRadius: '9999px',
-                    background: meta.gradient,
-                  }}
+                <LevelCard
+                  level={level}
+                  progress={levelProgress[level.id]}
+                  isNext={level.id === next?.id}
+                  onStart={() => startLevel(level)}
                 />
-              </div>
-            </div>
-
-            {pct === 100 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 200 }}
-                className="font-[family-name:var(--font-pixel)] text-sm font-bold"
-                style={{
-                  marginTop: '20px',
-                  padding: '8px 16px',
-                  borderRadius: '12px',
-                  background: '#f0fdf4',
-                  color: '#22c55e',
-                  border: '1px solid #bbf7d0',
-                }}
-              >
-                {'\u{1F389}'} ALL CLEAR!
-              </motion.div>
-            )}
-          </motion.div>
+              </motion.li>
+            ))}
+          </ul>
         </div>
-
-        {/* Right main area - level grid */}
-        <div
-          className="flex-1 overflow-y-auto flex items-start lg:items-center justify-center relative"
-          style={{ padding: '24px' }}
-        >
-          {/* Dot pattern overlay */}
-          <div className="absolute inset-0 bg-dots opacity-[0.03] pointer-events-none" />
-          <div
-            className="grid grid-cols-2 lg:grid-cols-3 w-full max-w-3xl"
-            style={{ gap: '20px' }}
-          >
-            {levels.map((level, i) => {
-              const prog = levelProgress[level.id]
-              const completed = prog?.completed
-
-              // Card styles by state
-              const cardBg = completed ? '#f0fdf4' : '#ffffff'
-              const cardBorder = completed
-                ? '1.5px solid #86efac'
-                : `1.5px solid ${meta.color}55`
-              const cardShadow = completed
-                ? '0 2px 12px rgba(34, 197, 94, 0.1)'
-                : `0 2px 12px ${meta.color}15`
-
-              const badgeBg = completed ? '#22c55e' : meta.color
-
-              return (
-                <motion.button
-                  key={level.id}
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.04, type: 'spring', stiffness: 120, damping: 14 }}
-                  whileHover={{ y: -6, transition: { duration: 0.15 } }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => startLevel(level)}
-                  className="relative text-left transition-all min-h-[100px] flex items-stretch"
-                  style={{
-                    borderRadius: '16px',
-                    background: cardBg,
-                    border: cardBorder,
-                    boxShadow: cardShadow,
-                    cursor: 'pointer',
-                    transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = `0 8px 32px ${meta.color}25`
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = cardShadow
-                  }}
-                >
-                  {/* Colored left accent bar */}
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-                    style={{ background: completed ? '#4ade80' : meta.color }}
-                  />
-
-                  <div className="flex flex-col justify-between w-full" style={{ padding: '16px 16px 16px 20px' }}>
-                    {/* Top row: badge + stars/lock */}
-                    <div className="flex items-start justify-between" style={{ marginBottom: '10px' }}>
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-[family-name:var(--font-pixel)] text-sm font-bold text-white shrink-0"
-                        style={{ background: badgeBg }}
-                      >
-                        {i + 1}
-                      </div>
-
-                      {/* Stars for completed levels */}
-                      {completed && prog && (
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-sm" style={{ color: prog.stars.completed ? '#f59e0b' : '#cbd5e1' }}>
-                            {prog.stars.completed ? '\u2605' : '\u2606'}
-                          </span>
-                          <span className="text-sm" style={{ color: prog.stars.efficient ? '#f59e0b' : '#cbd5e1' }}>
-                            {prog.stars.efficient ? '\u2605' : '\u2606'}
-                          </span>
-                          <span className="text-sm" style={{ color: prog.stars.noHints ? '#f59e0b' : '#cbd5e1' }}>
-                            {prog.stars.noHints ? '\u2605' : '\u2606'}
-                          </span>
-                          <span className="ml-1 text-base" style={{ color: '#22c55e' }}>{'\u2713'}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Level title */}
-                    <h3
-                      className="text-sm font-[family-name:var(--font-pixel)] font-bold leading-snug min-h-[2.4em]"
-                      style={{ marginBottom: '6px', color: '#1e293b' }}
-                    >
-                      {t(level.titleKey)}
-                    </h3>
-
-                    {/* Optimal steps info */}
-                    <span
-                      className="text-xs font-[family-name:var(--font-ui)] font-semibold"
-                      style={{ color: '#94a3b8' }}
-                    >
-                      {`${t('game.optimal')}: ${level.optimalSteps} ${t('game.stepsShort')}`}
-                    </span>
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
+      </main>
+    </PageBackground>
   )
 }

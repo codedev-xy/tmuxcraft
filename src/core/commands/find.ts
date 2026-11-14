@@ -35,6 +35,6 @@ export function findCommand(word: string, table: readonly CommandSpec[]): Result
   if (tmuxName) return supported(tmuxName, table)
   const matches = TMUX_NAMES.filter(name => name.startsWith(word))
   if (matches.length === 0) return unknown(word, table)
-  if (matches.length > 1) return fail('parse.ambiguousCommand', { command: word, matches: matches.join(', ') })
+  if (matches.length > 1) return fail('parse.ambiguousCommand', { command: word, matches })
   return supported(matches[0], table)
 }

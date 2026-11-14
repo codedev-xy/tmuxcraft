@@ -1,9 +1,41 @@
 import { useEffect, useRef } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
+import { displayKey } from '@/core/keymap'
 import { formatError } from '@/i18n/format-error'
-import type { TranscriptEntry } from '@/hooks/useTmuxSession'
+import type { CommandSource, TranscriptEntry } from '@/hooks/useTmuxSession'
 
-/** The log under the terminal: typed lines, what tmux printed, and errors in the player's language. */
+function sourceLabel(t: TFunction, source: CommandSource): string {
+  if (source.type === 'key') return source.keys.map(displayKey).join(' ')
+  return t(source.type === 'click' ? 'terminal.mouseClick' : 'terminal.mouseDrag')
+}
+
+function LogLine({ entry }: { entry: TranscriptEntry }) {
+  const { t } = useTranslation()
+  switch (entry.kind) {
+    case 'error':
+      return <div data-kind="error" className="text-term-error">{formatError(t, entry.error)}</div>
+    case 'output':
+      return <div data-kind="output" className="whitespace-pre-wrap text-term-muted">{entry.text}</div>
+    case 'command':
+      return (
+        <div data-kind="command">
+          <span className="text-term-warning">{sourceLabel(t, entry.source)}</span>
+          <span className="text-term-faint">{'  →  '}</span>
+          <span className="text-term-cursor">{entry.command}</span>
+        </div>
+      )
+    case 'input':
+      return (
+        <div data-kind="input">
+          <span className="font-semibold text-term-prompt">$ </span>
+          <span className="text-term-text">{entry.text}</span>
+        </div>
+      )
+  }
+}
+
+/** The log under the terminal: typed lines, commands run by keys and the mouse, what tmux printed, and errors. */
 export function OutputLog({ transcript }: { transcript: readonly TranscriptEntry[] }) {
   const { t } = useTranslation()
   const boxRef = useRef<HTMLDivElement>(null)
@@ -16,24 +48,14 @@ export function OutputLog({ transcript }: { transcript: readonly TranscriptEntry
   return (
     <div
       ref={boxRef}
-      className="h-28 shrink-0 overflow-y-auto font-[family-name:var(--font-mono)] text-xs leading-relaxed"
-      style={{ padding: '8px 10px', background: '#0f172a', borderTop: '1px solid #334155' }}
+      role="log"
+      aria-label={t('terminal.log')}
+      className="h-28 shrink-0 overflow-y-auto border-t border-term-line bg-term-bg px-2.5 py-2 font-mono text-xs leading-relaxed whitespace-pre-wrap"
     >
       {transcript.length === 0 && (
-        <div className="flex h-full items-center justify-center" style={{ color: '#334155', letterSpacing: '0.05em' }}>
-          {t('game.outputPlaceholder')}
-        </div>
+        <div className="flex h-full items-center justify-center tracking-wide text-term-muted">{t('game.outputPlaceholder')}</div>
       )}
-      {transcript.map((entry, index) => {
-        if (entry.kind === 'error') return <div key={index} style={{ color: '#ef4444' }}>{formatError(t, entry.error)}</div>
-        if (entry.kind === 'output') return <div key={index} className="whitespace-pre-wrap" style={{ color: '#94a3b8' }}>{entry.text}</div>
-        return (
-          <div key={index}>
-            <span style={{ color: '#22c55e', fontWeight: 600 }}>$ </span>
-            <span style={{ color: '#e2e8f0' }}>{entry.text}</span>
-          </div>
-        )
-      })}
+      {transcript.map((entry, index) => <LogLine key={index} entry={entry} />)}
     </div>
   )
 }

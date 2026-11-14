@@ -1,9 +1,14 @@
 import type { StarRating } from './level-types'
 
+/** The most commands that still earn the efficient star. */
+export function efficientBudget(optimalSteps: number): number {
+  return Math.ceil(optimalSteps * 1.5)
+}
+
 export function calculateStars(commandCount: number, optimalSteps: number, hintsUsed: number): StarRating {
   return {
     completed: true,
-    efficient: commandCount <= Math.ceil(optimalSteps * 1.5),
+    efficient: commandCount <= efficientBudget(optimalSteps),
     noHints: hintsUsed === 0,
   }
 }

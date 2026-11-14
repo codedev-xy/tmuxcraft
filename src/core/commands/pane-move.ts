@@ -95,7 +95,7 @@ const joinPane: CommandSpec = {
   requiresServer: true,
   run: (state, args) => {
     const sourceTarget = flagValue(args, 's')
-    if (sourceTarget === undefined) return fail('parse.missingArg', { flag: '-s' })
+    if (sourceTarget === undefined) return fail('parse.missingArg', { flag: '-s', command: 'join-pane' })
     const source = resolvePane(state, sourceTarget)
     if (!source.ok) return source
     const target = resolvePane(state, flagValue(args, 't'))

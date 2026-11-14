@@ -11,11 +11,14 @@ const MOVES: Readonly<Record<KeyId, Move>> = {
   j: ({ row, col }) => ({ row: row + 1, col }),
   Left: ({ row, col }) => ({ row, col: col - 1 }),
   h: ({ row, col }) => ({ row, col: col - 1 }),
+  BSpace: ({ row, col }) => ({ row, col: col - 1 }),
   Right: ({ row, col }) => ({ row, col: col + 1 }),
   l: ({ row, col }) => ({ row, col: col + 1 }),
   '0': ({ row }) => ({ row, col: 0 }),
   '^': ({ row }) => ({ row, col: 0 }),
+  Home: ({ row }) => ({ row, col: 0 }),
   $: ({ row }) => ({ row, col: Infinity }),
+  End: ({ row }) => ({ row, col: Infinity }),
   g: () => ({ row: 0, col: 0 }),
   G: () => ({ row: Infinity, col: 0 }),
 }
@@ -23,6 +26,9 @@ const MOVES: Readonly<Record<KeyId, Move>> = {
 const SELECT_KEYS: readonly KeyId[] = ['Space', 'v', 'C-Space']
 const COPY_KEYS: readonly KeyId[] = ['Enter', 'y', 'M-w']
 const EXIT_KEYS: readonly KeyId[] = ['q', 'Escape']
+
+/** Unbound keys copy mode still takes, rather than let them reach the shell: plain characters, Enter and Space. */
+const isPlainKey = (key: KeyId): boolean => key.length === 1 || key === 'Enter' || key === 'Space'
 
 const lastIndex = (length: number) => Math.max(0, length - 1)
 const clamp = (value: number, max: number) => Math.min(Math.max(value, 0), max)
@@ -70,14 +76,17 @@ function copySelection(state: TmuxState, mode: CopyModeState, key: KeyId): TmuxS
   return appendLog({ ...left, clipboard: text }, { name: 'copy-selection', origin: 'key', key, detail: { text } })
 }
 
-/** Handles a key pressed in copy mode; every key is handled there, and none outside it. */
+/**
+ * Handles a key pressed in copy mode. Bound keys and plain keys are taken there; any other key (Tab,
+ * Ctrl or Alt chords with no action) is not, so the browser keeps it. Nothing is handled outside copy mode.
+ */
 export function copyModeKey(state: TmuxState, key: KeyId): { state: TmuxState; handled: boolean } {
   const mode = state.copyMode
   if (!mode) return { state, handled: false }
   if (EXIT_KEYS.includes(key)) return { state: { ...state, copyMode: null }, handled: true }
   if (COPY_KEYS.includes(key)) return { state: copySelection(state, mode, key), handled: true }
   if (SELECT_KEYS.includes(key)) return { state: { ...state, copyMode: { ...mode, anchor: mode.cursor } }, handled: true }
-  if (!Object.hasOwn(MOVES, key)) return { state, handled: true }
+  if (!Object.hasOwn(MOVES, key)) return { state, handled: isPlainKey(key) }
   const cursor = clampPosition(contentOf(state, mode), MOVES[key](mode.cursor))
   return { state: { ...state, copyMode: { ...mode, cursor } }, handled: true }
 }

@@ -15,7 +15,10 @@ function stub(name: string, aliases: readonly string[] = []): CommandSpec {
   return { name, aliases, flags: { h: 'bool', v: 'bool' }, maxArgs: Infinity, requiresServer: false, run: state => ok({ state }) }
 }
 
-const STUBS = [stub('split-window', ['splitw']), stub('new-window', ['neww']), stub('rename-window', ['renamew']), stub('source-file', ['source'])]
+const STUBS = [
+  stub('split-window', ['splitw']), stub('new-window', ['neww']), stub('rename-window', ['renamew']), stub('source-file', ['source']),
+  stub('kill-pane', ['killp']), stub('kill-window', ['killw']),
+]
 const ENGINE = testEngine([...OPTION_COMMANDS, ...KEY_COMMANDS, ...STUBS])
 
 function run(line: string, state: TmuxState = twoSessionState()) {
@@ -169,6 +172,12 @@ describe('list-keys', () => {
     expect(errorOf(run('lsk -T copy-mode')).code).toBe('key.tableUnsupported')
   })
 
+  it('shows the kill keys asking first, as tmux binds them', () => {
+    const output = must(run('list-keys -T prefix')).output
+    expect(output).toContain('bind-key -T prefix x confirm-before -p "kill-pane #P? (y/n)" kill-pane')
+    expect(output).toContain('bind-key -T prefix & confirm-before -p "kill-window #W? (y/n)" kill-window')
+  })
+
   it('escapes keys that a command line would read differently, so the lines run back', () => {
     const output = must(run('list-keys -T prefix')).output
     expect(output).toContain('bind-key -T prefix \\" split-window')
@@ -235,5 +244,44 @@ describe('command-prompt', () => {
 
   it('fails while detached', () => {
     expect(errorOf(run('command-prompt', { ...twoSessionState(), isDetached: true }))).toEqual({ code: 'state.detached' })
+  })
+})
+
+describe('confirm-before', () => {
+  it('opens a yes/no prompt labelled with the command and logs it', () => {
+    const result = must(run('confirm-before kill-pane'))
+    expect(result.state.prompt).toEqual({ label: "Confirm 'kill-pane'? (y/n)", initial: '', template: 'kill-pane', confirm: true })
+    expect(result.state.log.map(entry => [entry.name, entry.detail])).toEqual([['confirm-before', { command: 'kill-pane' }]])
+  })
+
+  it('names the command by its full name in the default label, and keeps the whole command line', () => {
+    const prompt = must(run('confirm "killp -t 1"')).state.prompt
+    expect(prompt).toEqual({ label: "Confirm 'kill-pane'? (y/n)", initial: '', template: 'killp -t 1', confirm: true })
+  })
+
+  it('uses the -p label with its formats expanded', () => {
+    expect(must(run("confirm -p 'kill #S:#W.#P?' kill-window")).state.prompt?.label).toBe('kill dev:editor.0?')
+  })
+
+  it('asks before killing from the default x and & bindings', () => {
+    const pane = must(run(DEFAULT_PREFIX_BINDINGS.x)).state.prompt
+    expect(pane).toEqual({ label: 'kill-pane 0? (y/n)', initial: '', template: 'kill-pane', confirm: true })
+    const window = must(run(DEFAULT_PREFIX_BINDINGS['&'])).state.prompt
+    expect(window).toEqual({ label: 'kill-window editor? (y/n)', initial: '', template: 'kill-window', confirm: true })
+  })
+
+  it('fails on a command it does not know, without opening anything', () => {
+    const result = run('confirm-before nope')
+    expect(errorOf(result).code).toBe('parse.unknownCommand')
+    expect(result.state.prompt).toBeNull()
+  })
+
+  it('needs exactly one command argument', () => {
+    expect(errorOf(run('confirm-before'))).toEqual({ code: 'parse.tooFewArgs', params: { command: 'confirm-before' } })
+    expect(errorOf(run('confirm-before kill-pane -t 1'))).toEqual({ code: 'parse.tooManyArgs', params: { command: 'confirm-before' } })
+  })
+
+  it('fails while detached', () => {
+    expect(errorOf(run('confirm-before kill-pane', { ...twoSessionState(), isDetached: true }))).toEqual({ code: 'state.detached' })
   })
 })

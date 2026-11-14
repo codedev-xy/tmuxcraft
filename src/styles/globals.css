@@ -1,158 +1,277 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Every colour, radius and shadow a component uses comes from here, as a utility class
+ * (`bg-surface`, `text-ink-soft`, `rounded-card`, `shadow-card`). Nothing in this file may sit outside a
+ * layer: unlayered rules beat every utility class.
+ */
 @theme {
-  /* ─── Light Playful Theme ─── */
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+  --color-current: currentColor;
 
-  /* Background */
-  --color-bg-primary: #f0f4ff;
+  /* Page and surfaces */
+  --color-page: #f0f4ff;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f8fafc;
+  --color-surface-sunken: #f1f5f9;
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+  --color-scrim: rgb(15 23 42 / 0.45);
 
-  /* Accent */
+  /* Text, strongest to faintest. `ink-faint` is for decoration only: it fails contrast on white. */
+  --color-ink: #1e293b;
+  --color-ink-soft: #475569;
+  --color-ink-muted: #64748b;
+  --color-ink-faint: #94a3b8;
+
+  /* Accent. Text on white uses `accent-strong` or deeper; white text goes on `accent-deep`. */
   --color-accent: #0ea5e9;
+  --color-accent-strong: #0284c7;
+  --color-accent-deep: #0369a1;
+  --color-accent-soft: #e0f2fe;
+  --color-accent-faint: #f0f9ff;
+  --color-accent-line: #bae6fd;
+  --color-accent-alt: #4f46e5;
 
-  /* Text */
-  --color-text-primary: #1e293b;
+  --color-success: #10b981;
+  --color-success-strong: #047857;
+  --color-success-soft: #ecfdf5;
+  --color-success-line: #a7f3d0;
 
-  /* Fonts */
-  --font-pixel: 'Fredoka', 'Nunito', sans-serif;
+  --color-warning: #f59e0b;
+  --color-warning-strong: #b45309;
+  --color-warning-soft: #fffbeb;
+  --color-warning-line: #fde68a;
+
+  --color-danger: #ef4444;
+  --color-danger-strong: #b91c1c;
+  --color-danger-soft: #fef2f2;
+  --color-danger-line: #fecaca;
+
+  --color-star: #f59e0b;
+  --color-star-off: #cbd5e1;
+
+  /* Chapters: 1 sky, 2 violet, 3 pink */
+  --color-chapter-1: #0ea5e9;
+  --color-chapter-1-strong: #0369a1;
+  --color-chapter-1-soft: #f0f9ff;
+  --color-chapter-1-line: #bae6fd;
+  --color-chapter-2: #8b5cf6;
+  --color-chapter-2-strong: #6d28d9;
+  --color-chapter-2-soft: #f5f3ff;
+  --color-chapter-2-line: #ddd6fe;
+  --color-chapter-3: #ec4899;
+  --color-chapter-3-strong: #be185d;
+  --color-chapter-3-soft: #fdf2f8;
+  --color-chapter-3-line: #fbcfe8;
+
+  /* The simulated terminal and the dark bars around it */
+  --color-term-bg: #0f172a;
+  --color-term-surface: #1e293b;
+  --color-term-raised: #334155;
+  --color-term-line: #334155;
+  --color-term-line-strong: #475569;
+  --color-term-text: #e2e8f0;
+  --color-term-muted: #94a3b8;
+  --color-term-faint: #64748b;
+  --color-term-cursor: #38bdf8;
+  --color-term-prompt: #4ade80;
+  --color-term-error: #fca5a5;
+  --color-term-warning: #fcd34d;
+  --color-term-select: #1d4ed8;
+
+  --font-display: 'Fredoka', 'Nunito', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   --font-ui: 'Nunito', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-dialog: 24px;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 2px 8px rgb(15 23 42 / 0.05);
+  --shadow-raised: 0 8px 24px rgb(15 23 42 / 0.1);
+  --shadow-dialog: 0 24px 64px rgb(15 23 42 / 0.25);
+  --shadow-key: 0 1px 2px rgb(14 165 233 / 0.12);
+
+  --animate-blink: blink 1s steps(1) infinite;
+  --animate-float: float 2.5s ease-in-out infinite;
+  --animate-drift: drift 10s ease-in-out infinite;
+  --animate-urgent: urgent 0.8s ease-in-out infinite;
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(8px, -16px) scale(1.04); }
+  }
+  @keyframes urgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/*
+ * Colours that follow their surroundings. An element with `data-chapter="2"` or `data-tone="success"`
+ * sets the variables; anything inside uses `bg-chapter`, `text-tone-strong`, `border-tone-line`, …
+ */
+@theme inline {
+  --color-chapter: var(--chapter);
+  --color-chapter-strong: var(--chapter-strong);
+  --color-chapter-soft: var(--chapter-soft);
+  --color-chapter-line: var(--chapter-line);
+  --color-tone: var(--tone);
+  --color-tone-strong: var(--tone-strong);
+  --color-tone-soft: var(--tone-soft);
+  --color-tone-line: var(--tone-line);
 }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
+@layer base {
+  :root,
+  [data-chapter="1"] {
+    --chapter: var(--color-chapter-1);
+    --chapter-strong: var(--color-chapter-1-strong);
+    --chapter-soft: var(--color-chapter-1-soft);
+    --chapter-line: var(--color-chapter-1-line);
+  }
+  [data-chapter="2"] {
+    --chapter: var(--color-chapter-2);
+    --chapter-strong: var(--color-chapter-2-strong);
+    --chapter-soft: var(--color-chapter-2-soft);
+    --chapter-line: var(--color-chapter-2-line);
+  }
+  [data-chapter="3"] {
+    --chapter: var(--color-chapter-3);
+    --chapter-strong: var(--color-chapter-3-strong);
+    --chapter-soft: var(--color-chapter-3-soft);
+    --chapter-line: var(--color-chapter-3-line);
+  }
+
+  :root,
+  [data-tone="accent"] {
+    --tone: var(--color-accent);
+    --tone-strong: var(--color-accent-deep);
+    --tone-soft: var(--color-accent-faint);
+    --tone-line: var(--color-accent-line);
+  }
+  [data-tone="success"] {
+    --tone: var(--color-success);
+    --tone-strong: var(--color-success-strong);
+    --tone-soft: var(--color-success-soft);
+    --tone-line: var(--color-success-line);
+  }
+  [data-tone="warning"] {
+    --tone: var(--color-warning);
+    --tone-strong: var(--color-warning-strong);
+    --tone-soft: var(--color-warning-soft);
+    --tone-line: var(--color-warning-line);
+  }
+  [data-tone="danger"] {
+    --tone: var(--color-danger);
+    --tone-strong: var(--color-danger-strong);
+    --tone-soft: var(--color-danger-soft);
+    --tone-line: var(--color-danger-line);
+  }
+  [data-tone="neutral"] {
+    --tone: var(--color-ink-muted);
+    --tone-strong: var(--color-ink-soft);
+    --tone-soft: var(--color-surface-sunken);
+    --tone-line: var(--color-line);
+  }
+  [data-tone="chapter"] {
+    --tone: var(--chapter);
+    --tone-strong: var(--chapter-strong);
+    --tone-soft: var(--chapter-soft);
+    --tone-line: var(--chapter-line);
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--color-page);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+  }
+
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  /* Keyboard focus is always visible. `on-dark` marks the terminal and the dark bars. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-deep);
+    outline-offset: 2px;
+  }
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--color-term-cursor);
+  }
+
+  ::selection {
+    background-color: rgb(14 165 233 / 0.2);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface-sunken);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
+  .on-dark ::-webkit-scrollbar-track {
+    background: var(--color-term-bg);
+  }
+  .on-dark ::-webkit-scrollbar-thumb {
+    background: var(--color-term-line-strong);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-body {
-  font-family: var(--font-ui);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
-}
+@layer components {
+  /* Frosted bar, used by page headers */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgb(255 255 255 / 0.75);
+  }
 
-/* ─── Scrollbar — thin, friendly ─── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* ─── Stat card — white with colored left border ─── */
-.stat-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 3px solid var(--color-accent);
-  border-radius: 14px;
-  padding: 16px 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-/* ─── Objective card ─── */
-.objective-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 14px 18px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.objective-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-/* ─── Keyframes ─── */
-
-@keyframes cursor-blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-@keyframes pulse-red {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-/* ─── Animation classes ─── */
-
-.animate-float {
-  animation: float 2.5s ease-in-out infinite;
-}
-
-/* ─── Selection color ─── */
-::selection {
-  background-color: rgba(14, 165, 233, 0.2);
-}
-
-/* ─── Shimmer — soft sweep ─── */
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(14, 165, 233, 0.08) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-/* ─── Dot pattern texture ─── */
-.bg-dots {
-  background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-/* ─── Glassmorphism ─── */
-.glass {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.75);
-}
-
-/* ─── Decorative keyframes ─── */
-
-@keyframes gradient-shift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(10px, -10px) scale(1.05); }
-  66% { transform: translate(-8px, 8px) scale(0.97); }
-}
-
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  /* Faint dot texture behind a page */
+  .bg-dots {
+    background-image: radial-gradient(circle, var(--color-line-strong) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
 }

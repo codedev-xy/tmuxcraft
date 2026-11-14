@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/i18n'
 import { countPanes } from '@/core/layout-engine'
 import { getActiveWindow } from '@/core/selectors'
 import type { ChallengeGoal } from '@/game/level-types'
+import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
 import { ChallengeScreen } from '../ChallengeScreen'
 
@@ -75,5 +76,45 @@ describe('ChallengeScreen', () => {
     expect(screen.getByText(i18n.t('challenge.timeUp'))).toBeInTheDocument()
     expect(commandBox()).toBeDisabled()
     expect(records()).toHaveLength(0)
+  })
+
+  it('shows the result in a dialog on success, with a way back to the menu', async () => {
+    const { user, commandBox } = open()
+    await user.type(commandBox(), ':split-window{Enter}')
+    const dialog = screen.getByRole('dialog', { name: i18n.t('challenge.completed') })
+    expect(within(dialog).getByRole('button', { name: /Try Again/ })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: i18n.t('challenge.backToMenu') }))
+    expect(useGameStore.getState().currentScreen).toBe('challenge-select')
+  })
+
+  it('shows the time-up dialog, and both of its actions work', () => {
+    vi.useFakeTimers()
+    const { commandBox } = open()
+    act(() => { vi.advanceTimersByTime(60_000) })
+    const dialog = () => screen.getByRole('dialog', { name: i18n.t('challenge.timeUp') })
+    fireEvent.click(within(dialog()).getByRole('button', { name: /Try Again/ }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(commandBox()).toBeEnabled()
+    act(() => { vi.advanceTimersByTime(60_000) })
+    fireEvent.click(within(dialog()).getByRole('button', { name: i18n.t('challenge.backToMenu') }))
+    expect(useGameStore.getState().currentScreen).toBe('challenge-select')
+  })
+
+  it('counts down and warns in the last ten seconds', () => {
+    vi.useFakeTimers()
+    open()
+    const timer = () => screen.getByRole('timer', { name: i18n.t('challenge.timeLeft') })
+    expect(timer()).toHaveTextContent('1:00')
+    expect(timer()).not.toHaveAttribute('data-tone', 'danger')
+    act(() => { vi.advanceTimersByTime(50_000) })
+    expect(timer()).toHaveTextContent('0:10')
+    expect(timer()).toHaveAttribute('data-tone', 'danger')
+  })
+
+  it('has a named back button and the round goal on screen', async () => {
+    const { user } = open()
+    expect(screen.getByText('Make two panes')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: i18n.t('challenge.backToMenu') }))
+    expect(useGameStore.getState().currentScreen).toBe('challenge-select')
   })
 })

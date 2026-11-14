@@ -147,7 +147,7 @@ describe('break-pane', () => {
 
 describe('join-pane', () => {
   it('needs -s', () => {
-    expect(errorOf(run(twoSessionState(), 'joinp'))).toEqual({ code: 'parse.missingArg', params: { flag: '-s' } })
+    expect(errorOf(run(twoSessionState(), 'joinp'))).toEqual({ code: 'parse.missingArg', params: { flag: '-s', command: 'join-pane' } })
   })
 
   it('stacks the -s pane below the active pane, removing its emptied window, and makes it active', () => {

@@ -43,7 +43,7 @@ describe('findCommand', () => {
   it('reports an ambiguous prefix with every command it could mean, including unsupported ones', () => {
     expect(errorOf('select')).toEqual({
       code: 'parse.ambiguousCommand',
-      params: { command: 'select', matches: 'select-layout, select-pane, select-window' },
+      params: { command: 'select', matches: ['select-layout', 'select-pane', 'select-window'] },
     })
   })
 

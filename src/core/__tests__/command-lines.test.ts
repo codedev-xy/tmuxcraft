@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest'
 import type { ExecResult } from '../commands/types'
 import { countPanes, getAllPanes } from '../layout-engine'
 import { getOption } from '../options'
+import { submitPrompt } from '../prompt'
 import { reduceKey } from '../reduce-key'
 import { getActiveSession, getActiveWindow } from '../selectors'
 import { submitLine } from '../shell'
 import { defaultState, emptyState } from '../state'
 import type { Session, TmuxState, Window } from '../types'
 import { appendPaneLines } from '../update'
-import { errorOf, must } from './harness'
+import { errorOf, must, runLines } from './harness'
 import { twoSessionState } from './fixtures'
 import { contentOf, ENGINE, paneOf, pressKeys, typeLines, withFiles } from './shell-engine'
 
@@ -301,8 +302,25 @@ describe('prefix keys', () => {
     expect(session(pressKeys(twoSessionState(), 'C-b', 'n', 'C-b', 'p')).activeWindowIndex).toBe(0)
   })
 
-  it('kills the pane on x', () => {
-    expect(paneIds(pressKeys(twoSessionState(), 'C-b', 'x'))).toEqual(['p2'])
+  it('asks before killing the pane on x, and kills it on y', () => {
+    const asking = pressKeys(twoSessionState(), 'C-b', 'x')
+    expect(asking.prompt).toMatchObject({ label: 'kill-pane 0? (y/n)', confirm: true })
+    expect(paneIds(asking)).toEqual(['p1', 'p2'])
+    expect(paneIds(must(submitPrompt(asking, 'y', ENGINE)).state)).toEqual(['p2'])
+    expect(paneIds(must(submitPrompt(asking, 'n', ENGINE)).state)).toEqual(['p1', 'p2'])
+  })
+
+  it('asks before killing the window on &, and kills it on y', () => {
+    const asking = pressKeys(twoSessionState(), 'C-b', '&')
+    expect(asking.prompt).toMatchObject({ label: 'kill-window editor? (y/n)', confirm: true })
+    expect(session(must(submitPrompt(asking, 'y', ENGINE)).state).windows.map(window => window.name)).toEqual(['server'])
+  })
+
+  it('kills at once on a key bound straight to kill-pane', () => {
+    const bound = runLines(ENGINE, twoSessionState(), ['bind-key x kill-pane'])
+    const after = pressKeys(bound, 'C-b', 'x')
+    expect(after.prompt).toBeNull()
+    expect(paneIds(after)).toEqual(['p2'])
   })
 
   it('zooms on z', () => {

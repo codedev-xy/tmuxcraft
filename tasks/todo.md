@@ -145,15 +145,48 @@ P4 没做、留给后面的：
 
 ## P5 UI 系统化
 
-- [ ] `globals.css` 设计变量、`:focus-visible`、`prefers-reduced-motion`
-- [ ] `src/components/ui/`：Button、IconButton、ScreenHeader、PageBackground、Card、ProgressBar、StarRating、Dialog、Kbd、Confetti、Toast
-- [ ] 全部页面改用变量和组件
-- [ ] `GameScreen.tsx` 拆分
-- [ ] 配置编辑器、鼠标模式、状态栏渲染、复制模式覆盖层
-- [ ] 交互修复：前缀命令回显、PREFIX 徽标、行内重命名、`tmux ls` 输出、提示扣星逻辑
-- [ ] 响应式布局
-- [ ] 首页“继续游戏”和速查表入口；硬编码字符串进 i18n
-- [ ] 浏览器实测（`/browse`）
+- [x] `globals.css` 设计变量、`:focus-visible`、`prefers-reduced-motion`
+- [x] `src/components/ui/`：Button、IconButton、ScreenHeader、PageBackground、Card、ProgressBar、StarRating、Dialog、Kbd、Pill、Stat、Confetti（Toast 没做：没有两处以上要用的地方）
+- [x] 全部页面改用变量和组件
+- [x] `GameScreen.tsx` 拆分（`LevelPlay` + `useLevelPlay` + `PlayLayout`，挑战页共用外壳和终端）
+- [x] 配置编辑器、鼠标模式、状态栏渲染、复制模式显示
+- [x] 交互修复：前缀命令回显、前缀徽标、行内重命名、`tmux ls` 输出、提示扣星逻辑
+- [x] 响应式布局
+- [x] 首页“继续游戏”和手册入口；硬编码字符串进 i18n（挑战生成器的目标文字除外，P6 处理）
+- [x] 浏览器实测（`/browse`）
+
+P5 结果：lint 0 错误、`tsc -b` 通过、`npm run build` 通过、测试 1532 → 1804 全过（76 个文件）。`src/core` + `src/game` 覆盖率：语句 93.45% / 分支 90.83% / 函数 94.56% / 行 94.58%。
+
+浏览器实测（中文界面为主，1280×800 和 390×800，控制台无报错）：
+- 首页、章节页、关卡页、设置页、手册页、挑战选择页：显示正常；390 宽无横向溢出；首页按 Tab 依次到每个按钮，焦点框可见，回车能进设置。
+- 1-1：看一条提示后通关，得两星（无提示星未得）；速查弹窗打开时命令框停用，Esc 关闭。
+- 1-4：`Ctrl+b →`、`Ctrl+b x` 出现 `kill-pane 1? (y/n)`，按 `y` 后两步三星，分步引导按顺序勾上。
+- 3-4：编辑器写三行、Ctrl+S 保存并关闭、`:source-file`、`Ctrl+a r`，四步三星。
+- 3-2：鼠标关闭时边框不可拖；开启后拖动边框一次只记一条 `resize-pane`，点击右侧面板后通关。
+- 2-5：复制模式徽标、光标和选区显示正常。
+- 设置页重置弹窗：默认焦点在“取消”，Esc 关闭后焦点回到触发按钮（英文界面）。
+- 没在浏览器里测的：3-5、挑战模式完整一局、结果弹窗、Firefox / Safari。
+
+P5 之后玩家能看到的变化：
+- 所有页面换成同一套颜色、圆角、阴影和按钮；键盘焦点始终可见；系统开了“减少动态效果”时动画关闭。
+- 首页有“继续：下一关”按钮、总进度和中 / EN 切换；关卡不再上锁，下一关有标记。
+- 关卡内：提示不再有免费的第一条，按需逐条查看，看任何一条都失去“无提示”星，界面上写明；统计卡显示离“高效”星还剩几条命令。
+- `Ctrl+b x` / `Ctrl+b &` 先问 y/n（和真实 tmux 一样）；直接输入 `kill-pane` 不问。
+- 复制模式只接管它自己的键，Tab 和未绑定的 Ctrl / Alt 组合键交还浏览器。
+- 手册的条目来自一张表，表里每一条都有测试保证能在模拟器里执行；可按按键、命令名或说明搜索。
+- 设置页的版本号读 `package.json`（现在是 0.0.0，P7 改成 2.0.0）。
+
+实现中发现并修掉的：
+- 旧 `globals.css` 里不在任何 layer 中的 `* { margin: 0; padding: 0 }` 压过了所有 Tailwind 的内外边距类（`px-3` 实测 0px）。现在文件里的规则全部在 layer 内。
+- 手册测试里关闭面板 / 窗口的条目用按键 `y` 回答确认，实际没有关掉任何东西却通过了；改成提示行输入并加了“确实关掉”的断言。
+- 手册搜索 `split` 找不到 `Ctrl+b %`；按键条目现在也能按它默认绑定的命令搜到。
+- 设置页重置说明还提到已删除的成就。
+- 删掉 11 个不再使用的 i18n key；“高效”星的步数上限只在 `scoring.ts` 定义一次。
+
+P5 没做、留给后面的：
+- P6：挑战选择页显示 60 / 90 / 120 秒三档，但点哪一档开始的都是初级 60 秒；挑战目标文字不走 i18n；`progress-store` 里的 `CHAPTER_SIZES`、`getChapterProgress`、`achievements` 已无页面使用；首页和设置页切换语言时同时写 `i18n` 和 `user-store`。
+- 组件测试运行时有 React `act()` 警告（不影响结果）。
+- 窄屏下复制模式、提示行这类依赖实体键盘的操作没有触屏替代。
 
 ## P6 挑战模式、存档、语言
 
