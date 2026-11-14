@@ -31,7 +31,7 @@ const pasteBuffer: CommandSpec = {
     if (!target.ok) return target
     const paneId = target.value.pane.id
     const text = state.clipboard.replace(/\r?\n/g, ' ')
-    return ok({ state: updatePane(state, paneId, pane => ({ ...pane, input: pane.input + text })), detail: { pane: paneId } })
+    return ok({ state: updatePane(state, paneId, pane => ({ ...pane, input: pane.input + text })), detail: { pane: paneId, text } })
   },
 }
 

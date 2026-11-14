@@ -63,7 +63,7 @@ export function runFile(
   if (!text.ok) return text
   let run: FileRun = { state, output: [], errors: [] }
   for (const { text: line, line: number } of fileLines(text.value)) {
-    const result = runLine(run.state, line, { origin, depth })
+    const result = runLine(run.state, line, { origin, depth, file: normalized })
     const at = { path: normalized, line: number }
     run = {
       state: result.state,

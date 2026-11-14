@@ -1,4 +1,5 @@
 import type { TmuxState } from '@/core/types'
+import type { PlayerInput } from '@/game/sim/simulate'
 
 // ===== Level Types =====
 
@@ -20,8 +21,12 @@ export interface LevelDefinition {
   initialState: TmuxState           // starting state
   objectives: LevelObjective[]      // what needs to be accomplished
   hints: [string, string, string]   // 3 hint i18n keys (progressive)
-  optimalSteps: number              // minimum steps to complete
-  tutorialSteps?: TutorialStep[]    // for tutorial type levels
+  /** How many steps the reference solution takes. Stars are scored against this. */
+  optimalSteps: number
+  /** The way the hints teach, as the player would do it. It completes the level in `optimalSteps` steps. */
+  solution: readonly PlayerInput[]
+  /** A walk-through shown in the objectives panel, for levels with more than one move. */
+  tutorialSteps?: TutorialStep[]
 }
 
 export interface LevelObjective {
@@ -32,8 +37,8 @@ export interface LevelObjective {
 
 export interface TutorialStep {
   messageKey: string                // i18n key for instruction text
-  highlightElement?: string         // CSS selector to highlight
-  autoAdvance?: boolean             // auto-advance after delay
+  /** True once the player has done this step, so the panel can tick it and point at the next. */
+  done: (state: TmuxState) => boolean
 }
 
 // ===== Progress & Scoring =====

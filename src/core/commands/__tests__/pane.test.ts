@@ -139,6 +139,12 @@ describe('split-window', () => {
     expect(errorOf(run(narrow, 'splitw -h -t server'))).toEqual({ code: 'pane.noSpace' })
   })
 
+  it('accepts a start directory with -c and ignores it', () => {
+    const state = after('splitw -h -c "#{pane_current_path}"')
+    expect(shapeOf(state)).toBe('((p1|p5)|p2)')
+    expect(windowPanes(win(state, 'w1'))[1].content).toEqual([])
+  })
+
   it('runs trailing words as a shell line in the new pane', () => {
     const state = after('splitw -h tail -f app.log')
     expect(windowPanes(win(state, 'w1'))[1].content).toEqual(['$ tail -f app.log'])

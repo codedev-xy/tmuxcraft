@@ -35,7 +35,7 @@ describe('fileLines', () => {
 describe('runScript', () => {
   /** Records every line and context it was given. */
   const recorder: ScriptLineRunner = (state, paneId, line, ctx) => ({
-    state: appendLog(state, { name: 'shell', origin: ctx.origin, detail: { pane: paneId, line, depth: String(ctx.depth) } }),
+    state: appendLog(state, { name: 'shell', origin: ctx.origin, file: ctx.file, detail: { pane: paneId, line, depth: String(ctx.depth) } }),
     ok: line !== 'fail',
     output: [],
     errors: line === 'fail' ? [{ code: 'shell.commandNotFound', params: { command: 'fail' } }] : [],
@@ -44,7 +44,8 @@ describe('runScript', () => {
   const state = withFiles(defaultState(), { '~/s.sh': 'one\nfail\n\ntwo\nexit\nthree\n' })
 
   it('runs each line in the pane one file deeper, as a script', () => {
-    const result = runScript(state, 'p1', 's.sh', { origin: 'typed', depth: 1 }, recorder)
+    const result = runScript(state, 'p1', 's.sh', { origin: 'typed', depth: 1, file: '~/outer.sh' }, recorder)
+    expect(result.state.log.map(entry => entry.file)).toEqual(['~/s.sh', '~/s.sh', '~/s.sh', '~/s.sh'])
     expect(result.state.log.map(entry => entry.detail)).toEqual([
       { pane: 'p1', line: 'one', depth: '2' },
       { pane: 'p1', line: 'fail', depth: '2' },
@@ -107,6 +108,15 @@ describe('bash / sh', () => {
       ['shell', 'script', 'echo one'],
       ['shell', 'script', 'echo two'],
       ['shell', 'typed', 'sh a.sh'],
+    ])
+  })
+
+  it('logs script lines and the tmux commands in them with the script they came from', () => {
+    const result = bash(withFiles(defaultState(), { '~/a.sh': 'tmux set -g mouse on\n' }), 'bash ./a.sh')
+    expect(result.state.log.map(entry => [entry.name, entry.file])).toEqual([
+      ['set-option', '~/a.sh'],
+      ['shell', '~/a.sh'],
+      ['shell', undefined],
     ])
   })
 

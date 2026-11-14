@@ -13,7 +13,7 @@ import { buildWindow, formatWindowLine, runStartCommand, selectWindowAt } from '
 const newWindow: CommandSpec = {
   name: 'new-window',
   aliases: ['neww'],
-  flags: { d: 'bool', n: 'value', t: 'value' },
+  flags: { d: 'bool', n: 'value', t: 'value', c: 'value' },
   maxArgs: Infinity,
   requiresServer: true,
   run: (state, args, ctx) => {

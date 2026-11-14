@@ -9,6 +9,8 @@ export interface ExecContext {
   readonly key?: KeyId
   /** How many files (sourced configs, scripts) deep this line is; 0 or absent at the top. */
   readonly depth?: number
+  /** Normalized path of the file this line is in, when it is a line of a config file or script. */
+  readonly file?: string
 }
 
 export interface ExecResult {

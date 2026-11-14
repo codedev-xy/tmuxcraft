@@ -2,10 +2,13 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { getHint } from '@/game/hint-system'
 import { renderHintText } from './hint-utils'
+import { Walkthrough } from './Walkthrough'
+import type { TmuxState } from '@/core/types'
 import type { LevelDefinition, ValidationResult } from '@/game/level-types'
 
 interface ObjectivesPanelProps {
   currentLevel: LevelDefinition
+  state: TmuxState
   validation: ValidationResult
   commandCount: number
   objectiveFlash: boolean
@@ -15,6 +18,7 @@ interface ObjectivesPanelProps {
 
 export function ObjectivesPanel({
   currentLevel,
+  state,
   validation,
   commandCount,
   objectiveFlash,
@@ -147,13 +151,17 @@ export function ObjectivesPanel({
                       completed ? 'text-green-700 font-semibold' : 'text-slate-600'
                     }`}
                   >
-                    {t(obj.descriptionKey)}
+                    {renderHintText(t(obj.descriptionKey))}
                   </span>
                 </motion.div>
               )
             })}
           </div>
         </div>
+
+        {currentLevel.tutorialSteps && currentLevel.tutorialSteps.length > 0 && (
+          <Walkthrough steps={currentLevel.tutorialSteps} state={state} />
+        )}
 
         {/* ── Hint ── */}
         <div className="px-5 pt-5">
@@ -213,7 +221,7 @@ export function ObjectivesPanel({
                   <div>
                     <div className="font-[family-name:var(--font-pixel)] text-[10px] text-slate-400 tracking-widest mb-1">NEXT</div>
                     <div className="font-[family-name:var(--font-ui)] text-xs text-slate-500 leading-relaxed">
-                      {t(nextObj.descriptionKey)}
+                      {renderHintText(t(nextObj.descriptionKey))}
                     </div>
                   </div>
                 </div>

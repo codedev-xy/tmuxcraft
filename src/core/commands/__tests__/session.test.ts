@@ -64,6 +64,12 @@ describe('new-session', () => {
     expect(lastLog(state)).toEqual({ seq: 1, name: 'new-session', origin: 'typed', detail: { name: 'work' } })
   })
 
+  it('accepts a start directory with -c and ignores it', () => {
+    const state = must(shell(emptyState(), 'new -s work -c ~/src')).state
+    expect(sessionNames(state)).toEqual(['work'])
+    expect(windowPanes(state.sessions[0].windows[0])[0].content).toEqual([])
+  })
+
   it('rejects an empty name or one containing : or .', () => {
     for (const name of ['', 'a:b', 'a.b']) {
       expect(errorOf(executeArgv(emptyState(), ['new', '-d', '-s', name], TYPED, ENGINE))).toEqual({

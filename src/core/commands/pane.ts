@@ -47,7 +47,7 @@ function runInPane(state: TmuxState, paneId: string, words: readonly string[], o
 const splitWindow: CommandSpec = {
   name: 'split-window',
   aliases: ['splitw'],
-  flags: { h: 'bool', v: 'bool', d: 'bool', b: 'bool', t: 'value', p: 'value', l: 'value' },
+  flags: { h: 'bool', v: 'bool', d: 'bool', b: 'bool', t: 'value', p: 'value', l: 'value', c: 'value' },
   maxArgs: Infinity,
   requiresServer: true,
   run: (state, args, ctx) => {

@@ -66,7 +66,7 @@ describe('paste-buffer', () => {
     const state = after(withClipboard, 'pasteb')
     expect(paneOf(state, 'p1').input).toBe('npm run dev')
     expect(paneOf(state, 'p1').content).toEqual([])
-    expect(state.log.at(-1)).toMatchObject({ name: 'paste-buffer', detail: { pane: 'p1' } })
+    expect(state.log.at(-1)).toMatchObject({ name: 'paste-buffer', detail: { pane: 'p1', text: 'npm run dev' } })
   })
 
   it('appends to what is already typed in a target pane, without broadcasting', () => {

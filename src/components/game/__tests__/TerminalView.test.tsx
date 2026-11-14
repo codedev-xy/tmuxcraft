@@ -147,7 +147,7 @@ describe('TerminalView', () => {
     expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ counted: true }))
   })
 
-  it('edits a file opened with vim, saves it and closes the editor', async () => {
+  it('edits a file opened with vim; saving writes it and leaves the editor', async () => {
     const { user, lastResult, commandBox, panes } = open()
     await user.type(commandBox(), 'vim notes.txt{Enter}')
     const editor = screen.getByRole('textbox', { name: '~/notes.txt' })
@@ -155,10 +155,23 @@ describe('TerminalView', () => {
     await user.type(editor, 'set -g mouse on')
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(lastResult().state.files['~/notes.txt']).toBe('set -g mouse on')
-    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(lastResult().counted).toBe(true)
     expect(screen.queryByRole('textbox', { name: '~/notes.txt' })).not.toBeInTheDocument()
     expect(panes()).toHaveLength(1)
     expect(commandBox()).toHaveFocus()
+  })
+
+  it('leaves the editor without writing anything on Close', async () => {
+    const { user, onResult, commandBox } = open()
+    await user.type(commandBox(), 'vim notes.txt{Enter}')
+    const opened = onResult.mock.calls.length
+    await user.type(screen.getByRole('textbox', { name: '~/notes.txt' }), 'draft')
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('textbox', { name: '~/notes.txt' })).not.toBeInTheDocument()
+    expect(onResult).toHaveBeenCalledTimes(opened)
+    expect(commandBox()).toHaveFocus()
+    await user.type(commandBox(), 'cat notes.txt{Enter}')
+    expect(onResult.mock.calls.at(-1)![0].ok).toBe(false)
   })
 
   it('keeps keys inside copy mode until it is left', async () => {

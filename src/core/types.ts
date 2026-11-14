@@ -56,6 +56,8 @@ export interface LogEntry {
   readonly origin: Origin
   /** The key that fired the binding when `origin` is `key`. */
   readonly key?: KeyId
+  /** Normalized path of the config file or script whose line this was; absent for anything typed, pressed or clicked. */
+  readonly file?: string
   readonly detail?: Readonly<Record<string, string>>
 }
 

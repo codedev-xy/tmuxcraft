@@ -250,6 +250,7 @@ function LevelPlay({ currentLevel, onRetry }: LevelPlayProps) {
         {/* Right - Objectives Panel */}
         <ObjectivesPanel
           currentLevel={currentLevel}
+          state={state}
           validation={validation}
           commandCount={commandCount}
           objectiveFlash={objectiveFlash}

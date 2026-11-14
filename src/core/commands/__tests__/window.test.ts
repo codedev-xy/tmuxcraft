@@ -67,6 +67,10 @@ describe('new-window', () => {
     expect(lastLog(state)).toEqual({ seq: 1, name: 'new-window', origin: 'typed', detail: { name: 'bash', session: 'dev', index: '2' } })
   })
 
+  it('accepts a start directory with -c and ignores it', () => {
+    expect(windowNames(after('neww -c ~/src -n code'), 'dev')).toEqual(['editor', 'server', 'code'])
+  })
+
   it('names it with -n and leaves the current window with -d', () => {
     const state = after('new-window -d -n logs')
     expect(windowNames(state, 'dev')).toEqual(['editor', 'server', 'logs'])
@@ -220,7 +224,7 @@ describe('move-window', () => {
     expect(windowNames(state, 'staging')).toEqual(['logs', 'server'])
     expect(current(state, 'staging')).toBe(1)
     expect(state.activeSessionId).toBe('s1')
-    expect(lastLog(state).detail).toEqual({ name: 'server', session: 'staging', index: '1' })
+    expect(lastLog(state).detail).toEqual({ window: 'w2', name: 'server', from: 'dev', session: 'staging', index: '1' })
   })
 
   it('keeps the destination current window with -d', () => {

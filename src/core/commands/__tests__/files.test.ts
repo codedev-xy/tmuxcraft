@@ -34,6 +34,17 @@ describe('source-file', () => {
     expect(result.state.log.at(-1)?.detail).toEqual({ path: '~/.tmux.conf' })
   })
 
+  it('logs each line with the file it came from, and itself with none', () => {
+    const state = configured({ '~/a.conf': 'set -g mouse on\nsource b.conf', '~/b.conf': 'set -g status off' })
+    const result = must(run(state, 'source a.conf'))
+    expect(result.state.log.map(entry => [entry.name, entry.file])).toEqual([
+      ['set-option', '~/a.conf'],
+      ['set-option', '~/b.conf'],
+      ['source-file', '~/a.conf'],
+      ['source-file', undefined],
+    ])
+  })
+
   it('is found by its alias and reads any spelling of the path', () => {
     const result = must(run(configured({ '~/.tmux.conf': 'set -g mouse on' }), 'source .tmux.conf'))
     expect(result.state.options.mouse).toBe('on')
@@ -103,5 +114,62 @@ describe('source-file', () => {
     must(run(state, 'source ~/.tmux.conf'))
     expect(state.options).toEqual({})
     expect(state.log).toEqual([])
+  })
+})
+
+describe('~/.tmux.conf at server start', () => {
+  const start = (files: Readonly<Record<string, string>>, line = 'tmux new -s work') =>
+    ENGINE.shell(withFiles(emptyState(), files), 'outer', line, TYPED)
+
+  it('is loaded by the command that starts the server, as config lines of that file', () => {
+    const result = start({ '~/.tmux.conf': CONF })
+    expect(result.ok).toBe(true)
+    expect(result.state.options.prefix).toBe('C-a')
+    expect(result.state.keyTables.prefix['|']).toBe('split-window -h')
+    expect(result.state.log.map(entry => [entry.name, entry.origin, entry.file])).toEqual([
+      ['set-option', 'config', '~/.tmux.conf'],
+      ['bind-key', 'config', '~/.tmux.conf'],
+      ['bind-key', 'config', '~/.tmux.conf'],
+      ['new-session', 'typed', undefined],
+      ['shell', 'typed', undefined],
+    ])
+  })
+
+  it('is not loaded again by a later session', () => {
+    const started = start({ '~/.tmux.conf': 'set -g mouse on' }).state
+    const off = must(run(started, 'set -g mouse off')).state
+    const later = must(run(off, 'new-session -d -s more')).state
+    expect(later.options.mouse).toBe('off')
+    expect(logNames(later).filter(name => name === 'set-option')).toHaveLength(2)
+  })
+
+  it('reports a failing line with its file and line number and still starts the session', () => {
+    const result = start({ '~/.tmux.conf': 'set -g mouse on\nbogus-command\n' })
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual([
+      { code: 'parse.unknownCommand', params: { command: 'bogus-command' }, at: { path: '~/.tmux.conf', line: 2 } },
+    ])
+    expect(result.state.sessions.map(session => session.name)).toEqual(['work'])
+    expect(result.state.options.mouse).toBe('on')
+    expect(result.state.isDetached).toBe(false)
+  })
+
+  it('starts as usual when there is no config file', () => {
+    const result = start({})
+    expect(result.ok).toBe(true)
+    expect(logNames(result.state)).toEqual(['new-session', 'shell'])
+  })
+
+  it('is loaded before the command the session starts with', () => {
+    const result = start({ '~/.tmux.conf': 'set -g mouse on' }, 'tmux new -s work echo hi')
+    expect(logNames(result.state)).toEqual(['set-option', 'shell', 'new-session', 'shell'])
+  })
+
+  it('is loaded when a script starts the server', () => {
+    const files = { '~/.tmux.conf': 'set -g mouse on', '~/go.sh': 'tmux new-session -d -s work\ntmux attach -t work\n' }
+    const result = start(files, 'bash go.sh')
+    expect(result.ok).toBe(true)
+    expect(result.state.log[0]).toMatchObject({ name: 'set-option', origin: 'config', file: '~/.tmux.conf' })
+    expect(result.state.log[1]).toMatchObject({ name: 'new-session', origin: 'script', file: '~/go.sh' })
   })
 })

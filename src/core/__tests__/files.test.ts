@@ -34,6 +34,11 @@ describe('saveFile / readFile', () => {
     expect(readFile(twice, 'dev.sh')).toEqual({ ok: true, value: 'b' })
   })
 
+  it('closes the editor, as saving and quitting does, so tmux takes keys again', () => {
+    const editing = openEditor(emptyState(), '~/.tmux.conf')
+    expect(saveFile(editing, '~/.tmux.conf', 'set -g mouse on\n').editing).toBeNull()
+  })
+
   it('does not change the state it was given', () => {
     const state = emptyState()
     saveFile(state, 'dev.sh', 'a')

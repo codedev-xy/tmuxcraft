@@ -32,7 +32,8 @@ function moveWindow(state: TmuxState, args: ParsedArgs): Result<CommandOutcome> 
   const position = occupied ?? (same ? to.windows.length - 1 : to.windows.length)
   const moved = same && position === fromIndex ? state : insertWindow(removeWindow(state, window.id), to.id, window, null)
   const selected = hasFlag(args, 'd') ? moved : selectWindowAt(moved, to.id, position)
-  return ok({ state: selected, detail: { name: window.name, session: to.name, index: String(position) } })
+  const detail = { window: window.id, name: window.name, from: from.name, session: to.name, index: String(position) }
+  return ok({ state: selected, detail })
 }
 
 function swapWindow(state: TmuxState, args: ParsedArgs): Result<CommandOutcome> {

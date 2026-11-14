@@ -3,8 +3,8 @@ import { deepFreeze } from '@/core/__tests__/shell-engine'
 import { nextIdAfter, OUTER_PANE_ID } from '@/core/state'
 import type { LayoutNode, Pane, TmuxState } from '@/core/types'
 import type { LevelDefinition } from '@/game/level-types'
+import { key, line } from '@/game/sim/inputs'
 import { simulate } from '@/game/sim/simulate'
-import type { PlayerInput } from '@/game/sim/simulate'
 import { chapter1Levels } from '../chapter1'
 import { chapter2Levels } from '../chapter2'
 import { chapter3Levels } from '../chapter3'
@@ -17,9 +17,6 @@ const CHAPTERS: readonly (readonly [number, readonly LevelDefinition[], number])
 
 const ALL_LEVELS = CHAPTERS.flatMap(([, levels]) => levels)
 
-const line = (text: string): PlayerInput => ({ type: 'line', text })
-const key = (name: string): PlayerInput => ({ type: 'key', key: name })
-
 function treePanes(node: LayoutNode): Pane[] {
   if (node.pane) return [node.pane]
   return node.children ? node.children.flatMap(treePanes) : []
@@ -30,12 +27,6 @@ function allIds(state: TmuxState): string[] {
     session.id,
     ...session.windows.flatMap(window => [window.id, ...treePanes(window.layoutTree).map(pane => pane.id)]),
   ])
-}
-
-function levelById(id: string): LevelDefinition {
-  const level = ALL_LEVELS.find(candidate => candidate.id === id)
-  if (!level) throw new Error(`no level ${id}`)
-  return level
 }
 
 function objectivesMet(level: LevelDefinition, state: TmuxState): boolean[] {
@@ -103,40 +94,5 @@ describe.each(ALL_LEVELS.map(level => [level.id, level] as const))('level %s', (
     for (const result of objectivesMet(level, run.state)) {
       expect(typeof result).toBe('boolean')
     }
-  })
-})
-
-describe('validators on new-engine state', () => {
-  it('1-6 completes when p2 is active and the window is zoomed', () => {
-    const level = levelById('1-6')
-    const run = simulate(level.initialState, [line(':select-pane -R'), line(':resize-pane -Z')])
-    expect(objectivesMet(level, run.state)).toEqual([true])
-  })
-
-  it('1-6 does not complete when the wrong pane is zoomed', () => {
-    const level = levelById('1-6')
-    const run = simulate(level.initialState, [line(':resize-pane -Z')])
-    expect(objectivesMet(level, run.state)).toEqual([false])
-  })
-
-  it('3-3 completes once a status option is set', () => {
-    const level = levelById('3-3')
-    const run = simulate(level.initialState, [line(':set -g status-style bg=red')])
-    expect(objectivesMet(level, run.state)).toEqual([true])
-  })
-
-  it('3-4 completes once a config file is sourced', () => {
-    const level = levelById('3-4')
-    const run = simulate(level.initialState, [
-      { type: 'save', path: '~/.tmux.conf', text: 'set -g mouse on' },
-      line(':source-file ~/.tmux.conf'),
-    ])
-    expect(objectivesMet(level, run.state)).toEqual([true])
-  })
-
-  it('3-4 does not complete when sourcing a missing file fails', () => {
-    const level = levelById('3-4')
-    const run = simulate(level.initialState, [line(':source-file ~/missing.conf')])
-    expect(objectivesMet(level, run.state)).toEqual([false])
   })
 })

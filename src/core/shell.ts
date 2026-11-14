@@ -115,7 +115,12 @@ function runLine(state: TmuxState, line: string, env: LineEnv): ShellStep | null
   const echoed = env.interactive ? appendPaneLines(state, paneId, [`$ ${line}`]) : state
   const commands = tokens.ok ? parseCommands(tokens.value) : tokens
   const ran = commands.ok ? runCommands(echoed, commands.value, env) : step(echoed, [commands.error])
-  const logged = appendLog(ran.state, { name: 'shell', origin: ctx.origin, detail: { pane: paneId, line } })
+  const logged = appendLog(ran.state, {
+    name: 'shell',
+    origin: ctx.origin,
+    ...(ctx.file === undefined ? {} : { file: ctx.file }),
+    detail: { pane: paneId, line },
+  })
   return { ...ran, state: logged }
 }
 

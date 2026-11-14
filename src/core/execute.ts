@@ -51,6 +51,7 @@ function runCommand(state: TmuxState, words: readonly string[], ctx: ExecContext
     name: spec.name,
     origin: ctx.origin,
     ...(ctx.key === undefined ? {} : { key: ctx.key }),
+    ...(ctx.file === undefined ? {} : { file: ctx.file }),
     ...(detail ? { detail } : {}),
   })
   return { state: logged, ok: errors.length === 0, output, errors }

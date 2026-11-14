@@ -28,10 +28,13 @@ export function readFile(state: TmuxState, path: string): Result<string> {
   return ok(state.files[normalized])
 }
 
-/** Writes a file from the editor and logs it, so validators can tell whether a later `source-file` saw this version. */
+/**
+ * Writes a file from the editor and logs it, so validators can tell whether a later `source-file` saw this version.
+ * Saving also closes the editor (vim's `:wq`): closing alone is not a player input, so keys would otherwise stay blocked.
+ */
 export function saveFile(state: TmuxState, path: string, text: string): TmuxState {
   const normalized = normalizePath(path)
-  const saved = { ...state, files: { ...state.files, [normalized]: text } }
+  const saved = { ...state, files: { ...state.files, [normalized]: text }, editing: null }
   return appendLog(saved, { name: 'save-file', origin: 'typed', detail: { path: normalized } })
 }
 

@@ -5,6 +5,7 @@ import { allocId, createSession, DEFAULT_WINDOW_NAME } from '../state'
 import { resolveSession } from '../target'
 import { detachClient, removeSession, updateSession } from '../update'
 import type { CommandSpec } from './types'
+import { loadStartupConfig } from './files'
 import { CLIENT_COMMANDS } from './session-client'
 import { buildWindow, formatWindowLine, runStartCommand } from './window-shared'
 
@@ -42,7 +43,7 @@ function formatSessionLine(state: TmuxState, session: Session): string {
 const newSession: CommandSpec = {
   name: 'new-session',
   aliases: ['new'],
-  flags: { d: 'bool', n: 'value', s: 'value' },
+  flags: { d: 'bool', n: 'value', s: 'value', c: 'value' },
   maxArgs: Infinity,
   requiresServer: false,
   run: (state, args, ctx) => {
@@ -59,8 +60,14 @@ const newSession: CommandSpec = {
       activeSessionId: attach || first ? added.session.id : state.activeSessionId,
       isDetached: attach ? false : state.isDetached,
     }
+    const config = first ? loadStartupConfig(placed, ctx) : { state: placed, output: [], errors: [] }
     const paneId = added.session.windows[0].activePaneId
-    return ok(runStartCommand(placed, paneId, args.positional, ctx, { name }))
+    const started = runStartCommand(config.state, paneId, args.positional, ctx, { name })
+    return ok({
+      ...started,
+      output: [...config.output, ...(started.output ?? [])],
+      errors: [...config.errors, ...(started.errors ?? [])],
+    })
   },
 }
 
