@@ -257,42 +257,42 @@ describe('CommandParser - parseInput', () => {
 describe('CommandParser - parseKeySequence', () => {
   it('parses " as horizontal split', () => {
     const result = parser.parseKeySequence('C-b', '"')
-    expectCommand(result as any, 'split-horizontal')
+    expectCommand(result, 'split-horizontal')
   })
 
   it('parses % as vertical split', () => {
     const result = parser.parseKeySequence('C-b', '%')
-    expectCommand(result as any, 'split-vertical')
+    expectCommand(result, 'split-vertical')
   })
 
   it('parses c as new-window', () => {
     const result = parser.parseKeySequence('C-b', 'c')
-    expectCommand(result as any, 'new-window')
+    expectCommand(result, 'new-window')
   })
 
   it('parses n as next-window', () => {
     const result = parser.parseKeySequence('C-b', 'n')
-    expectCommand(result as any, 'next-window')
+    expectCommand(result, 'next-window')
   })
 
   it('parses p as previous-window', () => {
     const result = parser.parseKeySequence('C-b', 'p')
-    expectCommand(result as any, 'previous-window')
+    expectCommand(result, 'previous-window')
   })
 
   it('parses x as close-pane', () => {
     const result = parser.parseKeySequence('C-b', 'x')
-    expectCommand(result as any, 'close-pane')
+    expectCommand(result, 'close-pane')
   })
 
   it('parses z as zoom-pane', () => {
     const result = parser.parseKeySequence('C-b', 'z')
-    expectCommand(result as any, 'zoom-pane')
+    expectCommand(result, 'zoom-pane')
   })
 
   it('parses d as detach', () => {
     const result = parser.parseKeySequence('C-b', 'd')
-    expectCommand(result as any, 'detach')
+    expectCommand(result, 'detach')
   })
 
   it('parses arrow keys as select-pane', () => {
@@ -329,20 +329,20 @@ describe('CommandParser - parseKeySequence', () => {
   })
 
   it('parses ! as break-pane', () => {
-    expectCommand(parser.parseKeySequence('C-b', '!') as any, 'break-pane')
+    expectCommand(parser.parseKeySequence('C-b', '!'), 'break-pane')
   })
 
   it('parses Space as next-layout', () => {
-    expectCommand(parser.parseKeySequence('C-b', ' ') as any, 'next-layout')
-    expectCommand(parser.parseKeySequence('C-b', 'Space') as any, 'next-layout')
+    expectCommand(parser.parseKeySequence('C-b', ' '), 'next-layout')
+    expectCommand(parser.parseKeySequence('C-b', 'Space'), 'next-layout')
   })
 
   it('parses [ as enter-copy-mode', () => {
-    expectCommand(parser.parseKeySequence('C-b', '[') as any, 'enter-copy-mode')
+    expectCommand(parser.parseKeySequence('C-b', '['), 'enter-copy-mode')
   })
 
   it('parses ] as paste', () => {
-    expectCommand(parser.parseKeySequence('C-b', ']') as any, 'paste')
+    expectCommand(parser.parseKeySequence('C-b', ']'), 'paste')
   })
 
   it('returns error for unknown key', () => {

@@ -27,5 +27,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
+      include: ['src/core/**/*.ts', 'src/game/**/*.ts'],
+      exclude: ['**/__tests__/**', '**/*.test.ts', '**/types.ts', '**/level-types.ts'],
+      thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
+    },
   },
 })

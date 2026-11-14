@@ -3,30 +3,32 @@ import { TmuxEngine } from '@/core/tmux-engine'
 import type { TmuxState, ParsedCommand } from '@/core/types'
 
 export function useTmuxEngine(initialState?: TmuxState) {
-  const engineRef = useRef(new TmuxEngine(initialState))
-  const [state, setState] = useState<TmuxState>(() => engineRef.current.getState())
+  const [engine] = useState(() => new TmuxEngine(initialState))
+  const [state, setState] = useState<TmuxState>(() => engine.getState())
   const initialStateRef = useRef(initialState)
+
+  useEffect(() => {
+    return engine.on(event => {
+      if (event.type === 'state-changed') setState(engine.getState())
+    })
+  }, [engine])
 
   // Reset engine when initialState changes (e.g., navigating to next level)
   useEffect(() => {
     if (initialState !== initialStateRef.current) {
       initialStateRef.current = initialState
-      engineRef.current.reset(initialState)
-      setState(engineRef.current.getState())
+      engine.reset(initialState)
     }
-  }, [initialState])
+  }, [engine, initialState])
 
   const execute = useCallback((command: ParsedCommand) => {
-    engineRef.current.execute(command)
-    const newState = engineRef.current.getState()
-    setState(newState)
-    return newState
-  }, [])
+    engine.execute(command)
+    return engine.getState()
+  }, [engine])
 
   const reset = useCallback((newState?: TmuxState) => {
-    engineRef.current.reset(newState)
-    setState(engineRef.current.getState())
-  }, [])
+    engine.reset(newState)
+  }, [engine])
 
-  return { state, execute, reset, engine: engineRef.current }
+  return { state, execute, reset, engine }
 }

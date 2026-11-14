@@ -13,12 +13,14 @@ npm run dev       # Start dev server (Vite HMR)
 npm run build     # Type-check (tsc -b) then build for production
 npm run lint      # ESLint
 npm run preview   # Preview production build
-npx vitest run    # Run all tests
+npm run typecheck # tsc -b
+npm test          # Run all tests (vitest run)
+npm run coverage  # Tests with v8 coverage (80% threshold on src/core and src/game)
 npx vitest run src/core/__tests__/command-parser.test.ts  # Run single test file
 npx vitest --watch  # Watch mode
 ```
 
-Note: `npm run build` has pre-existing TS errors in test files and some utility files (unused variables, implicit any). These do not affect the production build via Vite, only `tsc -b` strict checking.
+`npm run lint`, `npm run typecheck` and `npm test` must all pass before committing.
 
 ## Architecture
 
@@ -104,3 +106,9 @@ Tests cover the core engine layer only (`src/core/__tests__/`). Tests use a `cmd
 ## Path Alias
 
 `@/` maps to `src/` (configured in both `vite.config.ts` and `tsconfig.app.json`).
+
+## Failure Records
+
+Format: what failed → why → how to prevent.
+
+- **`npm install -D @vitest/coverage-v8@^4.0.18` crashed with `Cannot read properties of null (reading 'edgesOut')`** → the caret range resolved to 4.1.12 while `vitest` is locked at 4.0.18; npm 10's arborist crashed in `#loadPeerSet` at `node_modules/vitest` (most likely the version-matched peer dependency) and never reported a conflict. The same install pinned to 4.0.18 succeeded. → Install `@vitest/*` packages with `--save-exact` at the exact version of the installed vitest (`node -p "require('./node_modules/vitest/package.json').version"`), and upgrade vitest and its `@vitest/*` companions together in one command.

@@ -6,7 +6,10 @@ export function useKeyCapture(onAction: (action: KeyAction) => void, enabled = t
   const [prefixActive, setPrefixActive] = useState(false)
   const handlerRef = useRef<KeybindingHandler | null>(null)
   const onActionRef = useRef(onAction)
-  onActionRef.current = onAction
+
+  useEffect(() => {
+    onActionRef.current = onAction
+  }, [onAction])
 
   useEffect(() => {
     if (!enabled) return

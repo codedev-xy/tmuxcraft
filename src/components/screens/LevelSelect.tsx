@@ -29,10 +29,6 @@ export function LevelSelect() {
   }, 0)
   const maxStars = levels.length * 3
 
-  const getStarCount = (prog: { stars: { completed: boolean; efficient: boolean; noHints: boolean } }) => {
-    return (prog.stars.completed ? 1 : 0) + (prog.stars.efficient ? 1 : 0) + (prog.stars.noHints ? 1 : 0)
-  }
-
   return (
     <div className="flex flex-col h-screen relative overflow-hidden" style={{ background: '#f0f4ff' }}>
       {/* Header bar */}
@@ -232,7 +228,6 @@ export function LevelSelect() {
             {levels.map((level, i) => {
               const prog = levelProgress[level.id]
               const completed = prog?.completed
-              const starCount = prog ? getStarCount(prog) : 0
 
               // Card styles by state
               const cardBg = completed ? '#f0fdf4' : '#ffffff'

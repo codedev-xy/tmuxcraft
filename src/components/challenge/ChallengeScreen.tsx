@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PaneRenderer } from '@/components/game/PaneRenderer'
 import { TmuxStatusBar } from '@/components/game/TmuxStatusBar'
+import { Confetti } from '@/components/ui/Confetti'
 import { useTmuxEngine } from '@/hooks/useTmuxEngine'
 import { useKeyCapture } from '@/hooks/useKeyCapture'
 import { CommandParser } from '@/core/command-parser'
@@ -11,6 +12,7 @@ import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
 import { useUserStore } from '@/store/user-store'
 import { isParseError } from '@/core/types'
+import type { ParsedCommand } from '@/core/types'
 import type { ChallengeGoal } from '@/game/level-types'
 
 const parser = new CommandParser()
@@ -49,22 +51,21 @@ export function ChallengeScreen() {
     return () => clearInterval(interval)
   }, [isRunning])
 
-  // Check completion
-  useEffect(() => {
-    if (!isRunning || isComplete) return
-    if (goal.validate(state)) {
-      setIsRunning(false)
-      setIsComplete(true)
-      const challengeTime = TIME_LIMIT - timeLeft
-      addChallengeRecord({
-        difficulty: 'beginner',
-        completedAt: new Date().toISOString(),
-        timeSeconds: challengeTime,
-        commandCount,
-        targetDescription: goal.description,
-      })
-    }
-  }, [state, goal, isRunning, isComplete, timeLeft, commandCount, addChallengeRecord])
+  const runCommand = useCallback((command: ParsedCommand) => {
+    const newState = execute(command)
+    const nextCount = commandCount + 1
+    setCommandCount(nextCount)
+    if (!goal.validate(newState)) return
+    setIsRunning(false)
+    setIsComplete(true)
+    addChallengeRecord({
+      difficulty: 'beginner',
+      completedAt: new Date().toISOString(),
+      timeSeconds: TIME_LIMIT - timeLeft,
+      commandCount: nextCount,
+      targetDescription: goal.description,
+    })
+  }, [execute, goal, commandCount, timeLeft, addChallengeRecord])
 
   const handleCommand = useCallback((raw: string) => {
     const result = parser.parseInput(raw)
@@ -72,19 +73,15 @@ export function ChallengeScreen() {
       setOutput(prev => [...prev, `$ ${raw}`, `Error: ${result.message}`])
     } else {
       setOutput(prev => [...prev, `$ ${raw}`])
-      execute(result)
-      setCommandCount(c => c + 1)
+      runCommand(result)
     }
-  }, [execute])
+  }, [runCommand])
 
   useKeyCapture(
     useCallback((action) => {
       const result = parser.parseKeySequence('C-b', action.display)
-      if (!isParseError(result)) {
-        execute(result)
-        setCommandCount(c => c + 1)
-      }
-    }, [execute]),
+      if (!isParseError(result)) runCommand(result)
+    }, [runCommand]),
     isRunning
   )
 
@@ -291,30 +288,7 @@ export function ChallengeScreen() {
             }}
           >
             {/* Confetti for success */}
-            {isComplete && Array.from({ length: 18 }).map((_, i) => (
-              <motion.div
-                key={`confetti-${i}`}
-                className="absolute"
-                initial={{ opacity: 1, x: 0, y: 0, scale: Math.random() * 0.5 + 0.5 }}
-                animate={{
-                  opacity: [1, 1, 0],
-                  x: (Math.random() - 0.5) * 500,
-                  y: Math.random() * -300 - 100,
-                  rotate: Math.random() * 720 - 360,
-                }}
-                transition={{
-                  duration: 1.8 + Math.random() * 0.8,
-                  delay: Math.random() * 0.4,
-                  ease: [0.2, 0.8, 0.4, 1],
-                }}
-                style={{
-                  width: `${Math.random() * 8 + 4}px`,
-                  height: `${Math.random() * 8 + 4}px`,
-                  borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                  background: ['#f59e0b', '#0ea5e9', '#ec4899', '#10b981', '#8b5cf6', '#f97316'][i % 6],
-                }}
-              />
-            ))}
+            {isComplete && <Confetti count={18} />}
 
             <motion.div
               initial={{ scale: 0.6, opacity: 0, y: 40 }}

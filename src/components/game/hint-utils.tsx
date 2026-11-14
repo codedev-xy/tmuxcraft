@@ -9,7 +9,7 @@ const HINT_PATTERN = new RegExp(
     /Ctrl\+b\s+Ctrl\+(?:方向键|[a-zA-Z0-9→←↑↓]+)/.source,
     /Ctrl\+b\s+(?:Space|方向键|Arrow|数字)/.source,
     /Ctrl\+b\s+\S(?:\/\S)?/.source,
-    /:[a-z][-a-z]*(?:\s+[-a-zA-Z0-9<>~%\/.'":_]+)*/.source,
+    /:[a-z][-a-z]*(?:\s+[-a-zA-Z0-9<>~%/.'":_]+)*/.source,
     /tmux\s+(?:new(?:\s+-s\s+\S+)?|attach(?:\s+-t\s+\S+)?|ls)/.source,
     /\bexit\b/.source,
   ].join('|'),

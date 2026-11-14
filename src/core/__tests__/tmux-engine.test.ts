@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { TmuxEngine } from '../tmux-engine'
 import { getAllPanes, countPanes } from '../layout-engine'
-import type { ParsedCommand, TmuxState } from '../types'
+import type { CommandType, ParsedCommand, TmuxState } from '../types'
 
-function cmd(type: string, args: Record<string, any> = {}): ParsedCommand {
-  return { type: type as any, args, raw: type }
+function cmd(type: string, args: ParsedCommand['args'] = {}): ParsedCommand {
+  return { type: type as CommandType, args, raw: type }
 }
 
 describe('TmuxEngine', () => {
