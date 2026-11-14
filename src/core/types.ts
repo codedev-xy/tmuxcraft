@@ -23,10 +23,6 @@ export interface TmuxState {
   outer: Pane
   /** Path of the file open in the editor (`vim ~/.tmux.conf`), null when the editor is closed. */
   editing: string | null
-  /** @deprecated Legacy engine only; replaced by `options`. */
-  setOptions: Record<string, string>
-  /** @deprecated Legacy engine only; replaced by `log`. */
-  sourcedFiles: string[]
 }
 
 export interface Session {
@@ -94,10 +90,6 @@ export interface Pane {
   /** Text sitting at the shell prompt that has not been run yet (typed by `send-keys` or pasted). */
   input: string
   cwd: string
-  /** @deprecated Legacy engine only. */
-  cursorPosition: { row: number; col: number }
-  /** @deprecated Legacy engine only; replaced by `Window.zoomed`. */
-  isZoomed: boolean
 }
 
 export interface LayoutNode {
@@ -122,88 +114,6 @@ export interface Rect {
   width: number
   height: number
 }
-
-// ===== Command Types =====
-
-export type CommandType =
-  // Session commands
-  | 'new-session'
-  | 'kill-session'
-  | 'switch-session'
-  | 'list-sessions'
-  | 'rename-session'
-  | 'detach'
-  | 'attach'
-  // Window commands
-  | 'new-window'
-  | 'close-window'
-  | 'next-window'
-  | 'previous-window'
-  | 'select-window'
-  | 'rename-window'
-  | 'move-window'
-  | 'swap-window'
-  | 'link-window'
-  // Pane commands
-  | 'split-horizontal'
-  | 'split-vertical'
-  | 'close-pane'
-  | 'select-pane'
-  | 'resize-pane'
-  | 'zoom-pane'
-  | 'swap-pane'
-  | 'break-pane'
-  | 'join-pane'
-  // Layout commands
-  | 'next-layout'
-  | 'select-layout'
-  // Copy mode commands
-  | 'enter-copy-mode'
-  | 'paste'
-  | 'copy-selection'
-  // Config commands
-  | 'set-option'
-  | 'set-window-option'
-  | 'bind-key'
-  | 'unbind-key'
-  | 'source-file'
-  | 'send-keys'
-  // Other
-  | 'exit'
-  | 'synchronize-panes'
-  | 'list-windows'
-  | 'list-panes'
-
-export interface ParsedCommand {
-  type: CommandType
-  args: Record<string, string | number | boolean>
-  raw: string
-}
-
-export interface ParseError {
-  error: true
-  message: string
-  suggestion?: string
-  raw: string
-}
-
-export type ParseResult = ParsedCommand | ParseError
-
-export function isParseError(result: ParseResult): result is ParseError {
-  return 'error' in result && result.error === true
-}
-
-// ===== Key Binding Types =====
-
-export interface KeyAction {
-  command: CommandType
-  args?: Record<string, string | number | boolean>
-  display: string
-}
-
-export type KeyBindingMap = Record<string, KeyAction>
-
-export type PrefixState = 'idle' | 'waiting'
 
 // ===== Layout Types =====
 
@@ -232,26 +142,3 @@ export interface CopyModeState {
 // ===== Direction =====
 
 export type Direction = 'up' | 'down' | 'left' | 'right'
-
-// ===== Engine Events =====
-
-export type EngineEventType =
-  | 'state-changed'
-  | 'command-executed'
-  | 'command-error'
-  | 'session-created'
-  | 'session-closed'
-  | 'window-created'
-  | 'window-closed'
-  | 'pane-created'
-  | 'pane-closed'
-  | 'pane-split'
-  | 'detached'
-  | 'attached'
-
-export interface EngineEvent {
-  type: EngineEventType
-  data?: unknown
-}
-
-export type EngineEventHandler = (event: EngineEvent) => void

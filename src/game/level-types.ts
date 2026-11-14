@@ -1,4 +1,4 @@
-import type { TmuxState, CommandType } from '@/core/types'
+import type { TmuxState } from '@/core/types'
 
 // ===== Level Types =====
 
@@ -18,7 +18,6 @@ export interface LevelDefinition {
   descriptionKey: string            // i18n key for description
   type: LevelType
   initialState: TmuxState           // starting state
-  availableCommands: CommandType[]   // commands allowed in this level
   objectives: LevelObjective[]      // what needs to be accomplished
   hints: [string, string, string]   // 3 hint i18n keys (progressive)
   optimalSteps: number              // minimum steps to complete
@@ -34,16 +33,7 @@ export interface LevelObjective {
 export interface TutorialStep {
   messageKey: string                // i18n key for instruction text
   highlightElement?: string         // CSS selector to highlight
-  expectedCommand?: CommandType     // wait for this command
   autoAdvance?: boolean             // auto-advance after delay
-}
-
-export interface ChapterDefinition {
-  id: number
-  titleKey: string
-  descriptionKey: string
-  levels: LevelDefinition[]
-  unlockCondition?: number          // chapter number that must be completed first
 }
 
 // ===== Progress & Scoring =====
@@ -75,26 +65,12 @@ export interface ChallengeGoal {
   optimalSteps: number
 }
 
-export interface ChallengeTemplate {
-  id: string
-  difficulty: ChallengeDifficulty
-  requiredCommands: CommandType[]
-  descriptionTemplate: string       // template with {{placeholders}}
-  generate: (seed?: number) => ChallengeGoal
-}
-
 export interface ChallengeRecord {
   difficulty: ChallengeDifficulty
   completedAt: string               // ISO timestamp
   timeSeconds: number
   commandCount: number
   targetDescription: string
-}
-
-export interface ChallengeConfig {
-  beginner: { timeLimit: 60; commandPool: CommandType[] }
-  intermediate: { timeLimit: 90; commandPool: CommandType[] }
-  advanced: { timeLimit: 120; commandPool: CommandType[] }
 }
 
 // ===== Validation =====
@@ -104,23 +80,4 @@ export interface ValidationResult {
   progress: number                  // 0-1
   completedObjectives: string[]
   remainingObjectives: string[]
-}
-
-// ===== User Settings =====
-
-export interface UserSettings {
-  language: 'zh' | 'en'
-}
-
-// ===== Layout Comparison =====
-
-export interface LayoutComparison {
-  match: number                     // 0-1 similarity score
-  differences: LayoutDifference[]
-}
-
-export interface LayoutDifference {
-  type: 'missing_pane' | 'extra_pane' | 'wrong_direction' | 'wrong_ratio' | 'wrong_name'
-  description: string
-  paneId?: string
 }

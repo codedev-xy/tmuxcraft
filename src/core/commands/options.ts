@@ -3,12 +3,12 @@ import { fail, ok } from '../errors'
 import type { Result } from '../errors'
 import { flagValue, hasFlag } from '../argparse'
 import type { ParsedArgs } from '../argparse'
-import { normalizeKey, RESERVED_KEYS } from '../keymap'
 import { getOption, isOptionName, OPTIONS } from '../options'
 import type { OptionName } from '../options'
 import { getActiveWindow } from '../selectors'
 import { resolveWindow } from '../target'
 import { updateWindow } from '../update'
+import { bindableKey } from './key-shared'
 import type { CommandOutcome, CommandSpec } from './types'
 
 /** The one window option the simulator models; it lives on `Window`, not in `state.options`. */
@@ -39,12 +39,6 @@ function flagSetting(option: string, current: string, value: string | undefined)
   return value === 'on' || value === 'off' ? ok(value) : badValue(option, value)
 }
 
-function keySetting(value: string): Result<string> {
-  const key = normalizeKey(value)
-  if (key === null) return fail('key.invalid', { key: value })
-  return RESERVED_KEYS.includes(key) ? fail('key.reserved', { key }) : ok(key)
-}
-
 /** The value to store for a global option, checked against its kind. */
 function settingFor(state: TmuxState, name: OptionName, value: string | undefined, append: boolean): Result<string> {
   const spec = OPTIONS[name]
@@ -52,7 +46,7 @@ function settingFor(state: TmuxState, name: OptionName, value: string | undefine
   if (value === undefined) return badValue(name, '')
   switch (spec.kind) {
     case 'key':
-      return keySetting(value)
+      return bindableKey(value)
     case 'choice':
       return (spec.choices as readonly string[]).includes(value) ? ok(value) : badValue(name, value)
     case 'number':

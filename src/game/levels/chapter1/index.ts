@@ -44,7 +44,6 @@ const level1_1: LevelDefinition = {
   descriptionKey: 'levels.1-1.description',
   type: 'tutorial',
   initialState: makeState([], '', true),
-  availableCommands: ['new-session'],
   objectives: [
     {
       id: 'create-session',
@@ -65,7 +64,6 @@ const level1_2: LevelDefinition = {
   descriptionKey: 'levels.1-2.description',
   type: 'layout_puzzle',
   initialState: singlePaneState(),
-  availableCommands: ['split-horizontal', 'split-vertical'],
   objectives: [
     {
       id: 'both-splits',
@@ -97,7 +95,6 @@ const level1_3: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['select-pane'],
   objectives: [
     {
       id: 'navigate-to-target',
@@ -129,7 +126,6 @@ const level1_4: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['close-pane', 'exit', 'select-pane'],
   objectives: [
     {
       id: 'close-target-pane',
@@ -153,7 +149,6 @@ const level1_5: LevelDefinition = {
   descriptionKey: 'levels.1-5.description',
   type: 'layout_puzzle',
   initialState: singlePaneState(),
-  availableCommands: ['split-horizontal', 'split-vertical', 'select-pane'],
   objectives: [
     {
       id: 'four-grid',
@@ -185,7 +180,6 @@ const level1_6: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['zoom-pane', 'select-pane'],
   objectives: [
     {
       id: 'zoom-pane',
@@ -195,7 +189,7 @@ const level1_6: LevelDefinition = {
         if (!win) return false
         const allPanes = getAllPanes(win.layoutTree)
         const p2 = allPanes.find(p => p.id === 'p2')
-        return !!p2 && p2.isZoomed && win.activePaneId === 'p2'
+        return !!p2 && win.zoomed && win.activePaneId === 'p2'
       },
     },
   ],
@@ -212,7 +206,6 @@ const level1_7: LevelDefinition = {
   descriptionKey: 'levels.1-7.description',
   type: 'workspace',
   initialState: singlePaneState(),
-  availableCommands: ['new-window'],
   objectives: [
     {
       id: 'three-windows',
@@ -242,7 +235,6 @@ const level1_8: LevelDefinition = {
     const sess = makeSession('s1', '0', [w1, w2, w3], 0)
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['next-window', 'previous-window', 'select-window'],
   objectives: [
     {
       id: 'switch-to-window-2',
@@ -272,7 +264,6 @@ const level1_9: LevelDefinition = {
     const sess = makeSession('s1', '0', [w1, w2, w3], 0)
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['rename-window', 'next-window', 'select-window'],
   objectives: [
     {
       id: 'name-editor',
@@ -315,7 +306,6 @@ const level1_10: LevelDefinition = {
   descriptionKey: 'levels.1-10.description',
   type: 'tutorial',
   initialState: singlePaneState('mywork'),
-  availableCommands: ['detach', 'attach'],
   objectives: [
     {
       id: 'detach-and-attach',
@@ -326,8 +316,8 @@ const level1_10: LevelDefinition = {
   hints: ['game.hints.1-10-1', 'game.hints.1-10-2', 'game.hints.1-10-3'],
   optimalSteps: 2,
   tutorialSteps: [
-    { messageKey: 'game.tutorial.1-10-step1', expectedCommand: 'detach' },
-    { messageKey: 'game.tutorial.1-10-step2', expectedCommand: 'attach' },
+    { messageKey: 'game.tutorial.1-10-step1' },
+    { messageKey: 'game.tutorial.1-10-step2' },
   ],
 }
 
@@ -340,7 +330,6 @@ const level1_11: LevelDefinition = {
   descriptionKey: 'levels.1-11.description',
   type: 'workspace',
   initialState: singlePaneState(),
-  availableCommands: ['new-window', 'rename-window', 'split-horizontal', 'split-vertical', 'select-pane', 'next-window', 'select-window'],
   objectives: [
     {
       id: 'editor-window',

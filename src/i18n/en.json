@@ -90,6 +90,8 @@
     "retry": "Retry",
     "backToLevels": "Back to Levels",
     "prefixActive": "Prefix key active, press next key...",
+    "commandBox": "command",
+    "commandPlaceholder": "Type a command and press Enter",
     "commandError": "Invalid command",
     "didYouMean": "Did you mean: {{command}}",
     "objectives": {
@@ -266,8 +268,78 @@
   "common": {
     "back": "Back",
     "close": "Close",
+    "save": "Save",
     "confirm": "Confirm",
     "cancel": "Cancel",
     "loading": "Loading..."
+  },
+  "errors": {
+    "didYouMean": "Did you mean: {{command}}?",
+    "parse": {
+      "unknownCommand": "unknown command: {{command}}",
+      "ambiguousCommand": "ambiguous command: {{command}}, could be: {{matches}}. Type more of the name.",
+      "unknownFlag": "unknown flag: {{flag}}",
+      "missingArg": "{{flag}} expects an argument",
+      "tooFewArgs": "{{command}}: too few arguments",
+      "tooManyArgs": "{{command}}: too many arguments (put text with spaces in quotes)",
+      "badNumber": "not a valid number: {{value}}",
+      "unterminatedQuote": "missing closing quote: every ' or \" must be closed"
+    },
+    "command": {
+      "unsupported": "{{command}} is a real tmux command, but the simulator does not support it yet"
+    },
+    "state": {
+      "detached": "not attached to a session: run tmux attach first"
+    },
+    "target": {
+      "sessionNotFound": "can't find session: {{target}} (tmux ls lists sessions)",
+      "windowNotFound": "can't find window: {{target}}",
+      "paneNotFound": "can't find pane: {{target}}"
+    },
+    "session": {
+      "none": "no server running: start one with tmux new",
+      "duplicate": "duplicate session: {{name}}. Pick another name, or attach to it with tmux attach -t {{name}}",
+      "nested": "sessions should be nested with care: you are already inside tmux. Add -d to create it in the background, or detach first (tmux detach)",
+      "badName": "bad session name: {{name}} (it must not be empty or contain : or .)"
+    },
+    "window": {
+      "indexInUse": "index in use: {{index}}. Choose a free window index"
+    },
+    "pane": {
+      "onlyOne": "can't break with only one pane: split the window first",
+      "same": "source and target panes must be different",
+      "noSpace": "no space for new pane: the pane is too small, make it bigger or close another pane first"
+    },
+    "layout": {
+      "unknown": "invalid layout: {{layout}} (try even-horizontal, even-vertical, main-horizontal, main-vertical or tiled)"
+    },
+    "option": {
+      "unknown": "invalid option: {{option}}",
+      "unsupported": "{{option}} is a real tmux option, but the simulator does not support it yet",
+      "badValue": "invalid value for {{option}}: {{value}}"
+    },
+    "key": {
+      "invalid": "unknown key: {{key}}",
+      "reserved": "{{key}} is taken by the browser and can't be used here; pick another key",
+      "unbound": "no key bound to {{key}} after the prefix",
+      "tableUnsupported": "key table {{table}} is not supported: use prefix or root"
+    },
+    "file": {
+      "notFound": "{{path}}: No such file or directory"
+    },
+    "script": {
+      "depth": "{{path}}: too many nested files (a file keeps sourcing itself?)"
+    },
+    "shell": {
+      "commandNotFound": "{{command}}: command not found",
+      "unsupported": "the simulator's shell does not support {{token}} (pipes and redirects); put it in quotes to use it as text",
+      "missingOperand": "{{command}}: missing file operand"
+    },
+    "buffer": {
+      "empty": "no buffers: copy some text first"
+    },
+    "copy": {
+      "notInMode": "not in copy mode: enter it first (prefix [)"
+    }
   }
 }

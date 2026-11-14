@@ -27,7 +27,6 @@ const level3_1: LevelDefinition = {
   descriptionKey: 'levels.3-1.description',
   type: 'tutorial',
   initialState: singlePaneState(),
-  availableCommands: ['set-option', 'bind-key', 'split-horizontal', 'split-vertical'],
   objectives: [
     {
       id: 'set-option-done',
@@ -48,8 +47,8 @@ const level3_1: LevelDefinition = {
   hints: ['game.hints.3-1-1', 'game.hints.3-1-2', 'game.hints.3-1-3'],
   optimalSteps: 3,
   tutorialSteps: [
-    { messageKey: 'game.tutorial.3-1-step1', expectedCommand: 'set-option' },
-    { messageKey: 'game.tutorial.3-1-step2', expectedCommand: 'bind-key' },
+    { messageKey: 'game.tutorial.3-1-step1' },
+    { messageKey: 'game.tutorial.3-1-step2' },
   ],
 }
 
@@ -70,7 +69,6 @@ const level3_2: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['set-option', 'select-pane'],
   objectives: [
     {
       id: 'enable-mouse',
@@ -85,8 +83,8 @@ const level3_2: LevelDefinition = {
   hints: ['game.hints.3-2-1', 'game.hints.3-2-2', 'game.hints.3-2-3'],
   optimalSteps: 2,
   tutorialSteps: [
-    { messageKey: 'game.tutorial.3-2-step1', expectedCommand: 'set-option' },
-    { messageKey: 'game.tutorial.3-2-step2', expectedCommand: 'select-pane' },
+    { messageKey: 'game.tutorial.3-2-step1' },
+    { messageKey: 'game.tutorial.3-2-step2' },
   ],
 }
 
@@ -99,14 +97,13 @@ const level3_3: LevelDefinition = {
   descriptionKey: 'levels.3-3.description',
   type: 'workspace',
   initialState: singlePaneState(),
-  availableCommands: ['set-option'],
   objectives: [
     {
       id: 'customize-status-bar',
       descriptionKey: 'levels.3-3.description',
       validate: (state) => {
         // User must set a status-bar related option (status-style, status-right, status-left, etc.)
-        return Object.keys(state.setOptions).some(key => key.startsWith('status'))
+        return Object.keys(state.options).some(key => key.startsWith('status'))
       },
     },
   ],
@@ -123,14 +120,13 @@ const level3_4: LevelDefinition = {
   descriptionKey: 'levels.3-4.description',
   type: 'workspace',
   initialState: singlePaneState(),
-  availableCommands: ['source-file', 'set-option', 'bind-key'],
   objectives: [
     {
       id: 'load-config',
       descriptionKey: 'levels.3-4.description',
       validate: (state) => {
         // User needs to source a config file (e.g., ~/.tmux.conf)
-        return state.sourcedFiles.length > 0
+        return state.log.some(entry => entry.name === 'source-file')
       },
     },
   ],
@@ -147,7 +143,6 @@ const level3_5: LevelDefinition = {
   descriptionKey: 'levels.3-5.description',
   type: 'workspace',
   initialState: makeState([], '', true),
-  availableCommands: ['new-session', 'new-window', 'rename-window', 'split-horizontal', 'split-vertical', 'send-keys', 'select-window'],
   objectives: [
     {
       id: 'scripted-session',
@@ -194,7 +189,6 @@ const level3_6: LevelDefinition = {
     const s2 = makeSession('s2', 'utils', [w3])
     return makeState([s1, s2], 's1')
   })(),
-  availableCommands: ['move-window', 'swap-window', 'link-window', 'switch-session', 'select-window'],
   objectives: [
     {
       id: 'move-window-cross-session',
@@ -219,11 +213,6 @@ const level3_7: LevelDefinition = {
   descriptionKey: 'levels.3-7.description',
   type: 'workspace',
   initialState: makeState([], '', true),
-  availableCommands: [
-    'new-session', 'new-window', 'rename-window', 'split-horizontal', 'split-vertical',
-    'select-pane', 'select-window', 'next-window', 'resize-pane', 'set-option',
-    'bind-key', 'source-file', 'send-keys', 'synchronize-panes',
-  ],
   objectives: [
     {
       id: 'custom-session',

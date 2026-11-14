@@ -1,28 +1,28 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { motion, AnimatePresence } from 'framer-motion'
-import { PaneRenderer } from './PaneRenderer'
-import { TmuxStatusBar } from './TmuxStatusBar'
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion'
+import { TerminalView } from './TerminalView'
 import { ObjectivesPanel } from './ObjectivesPanel'
 import { CompletionModal } from './CompletionModal'
 import { renderHintText } from './hint-utils'
-import { useTmuxEngine } from '@/hooks/useTmuxEngine'
-import { useKeyCapture } from '@/hooks/useKeyCapture'
-import { CommandParser } from '@/core/command-parser'
+import { useTmuxSession } from '@/hooks/useTmuxSession'
+import type { TmuxError } from '@/core/errors'
+import { getActiveSession } from '@/core/selectors'
+import { formatError } from '@/i18n/format-error'
+import type { InputResult } from '@/game/sim/simulate'
 import { validateLevel } from '@/game/validator'
 import { calculateStars } from '@/game/scoring'
 import { getHint } from '@/game/hint-system'
+import type { LevelDefinition } from '@/game/level-types'
 import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
 import { chapter1Levels } from '@/game/levels/chapter1'
 import { chapter2Levels } from '@/game/levels/chapter2'
 import { chapter3Levels } from '@/game/levels/chapter3'
-import type { ParsedCommand } from '@/core/types'
-import { isParseError } from '@/core/types'
 
 const allLevels = [...chapter1Levels, ...chapter2Levels, ...chapter3Levels]
 
-const parser = new CommandParser()
+const SHAKE = { x: [0, -4, 4, -3, 3, -1, 1, 0], transition: { duration: 0.4 } }
 
 /** Color for combo counter based on streak length */
 function comboColor(count: number): string {
@@ -47,78 +47,59 @@ const chapterQuickRef: Record<number, string[]> = {
   3: ['tmux new -s name', 'Ctrl+b $', 'Ctrl+b s', 'Ctrl+b d', 'tmux ls'],
 }
 
+/** The level screen. Every level, and every retry of it, gets a terminal of its own. */
 export function GameScreen() {
+  const currentLevel = useGameStore(s => s.currentLevel)
+  const resetLevel = useGameStore(s => s.resetLevel)
+  const [attempt, setAttempt] = useState(0)
+
+  if (!currentLevel) return null
+
+  const retry = () => {
+    resetLevel()
+    setAttempt(count => count + 1)
+  }
+
+  return <LevelPlay key={`${currentLevel.id}-${attempt}`} currentLevel={currentLevel} onRetry={retry} />
+}
+
+interface LevelPlayProps {
+  currentLevel: LevelDefinition
+  onRetry: () => void
+}
+
+function LevelPlay({ currentLevel, onRetry }: LevelPlayProps) {
   const { t } = useTranslation()
-  const { currentLevel, commandCount, hintsUsed, comboCount, isLevelComplete, addCommand, incrementCombo, resetCombo, useHint: markHintUsed, completeLevel: markComplete, resetLevel, setScreen, startLevel } = useGameStore()
+  const { commandCount, hintsUsed, comboCount, isLevelComplete, addCommand, incrementCombo, resetCombo, useHint: markHintUsed, completeLevel: markComplete, setScreen, startLevel } = useGameStore()
   const completeLevel = useProgressStore(s => s.completeLevel)
 
-  const [input, setInput] = useState('')
-  const [output, setOutput] = useState<string[]>([])
   const [currentHintLevel, setCurrentHintLevel] = useState(0)
   const [showHint, setShowHint] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<TmuxError | null>(null)
   const [objectiveFlash, setObjectiveFlash] = useState(false)
-  const [terminalShake, setTerminalShake] = useState(false)
   const [prevCompleted, setPrevCompleted] = useState<string[]>([])
+  const shake = useAnimationControls()
 
-  const inputRef = useRef<HTMLInputElement>(null)
-  const outputRef = useRef<HTMLDivElement>(null)
-  const commandHistoryRef = useRef<string[]>([])
-  const historyIndexRef = useRef(-1)
+  const session = useTmuxSession(currentLevel.initialState)
+  const { state } = session
 
-  const { state, execute, reset } = useTmuxEngine(currentLevel?.initialState)
+  const validation = useMemo(() => validateLevel(state, currentLevel), [state, currentLevel])
 
-  const validation = useMemo(
-    () => currentLevel ? validateLevel(state, currentLevel) : { isComplete: false, progress: 0, completedObjectives: [] as string[], remainingObjectives: [] as string[] },
-    [state, currentLevel]
-  )
-
-  // Reset local state when level changes
-  useEffect(() => {
-    setInput('')
-    commandHistoryRef.current = []
-    historyIndexRef.current = -1
-    setOutput([])
-    setCurrentHintLevel(0)
-    setShowHint(false)
-    setError('')
-    setObjectiveFlash(false)
-    setTerminalShake(false)
-    setPrevCompleted([])
-  }, [currentLevel?.id])
-
-  // Auto-scroll command output
-  useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight
+  const handleResult = useCallback((result: InputResult) => {
+    if (result.counted) {
+      addCommand()
+      incrementCombo()
     }
-  }, [output])
-
-  const handleCommand = useCallback((cmd: ParsedCommand) => {
-    execute(cmd)
-    addCommand()
-    setError('')
-    incrementCombo()
-  }, [execute, addCommand, incrementCombo])
-
-  // Key capture for prefix shortcuts
-  const { prefixActive } = useKeyCapture(
-    useCallback((action) => {
-      if (action.command === 'rename-window') {
-        const name = prompt(t('game.enterWindowName') || 'Enter window name:')
-        if (name) {
-          handleCommand({ type: action.command, args: { ...action.args, name }, raw: `Ctrl+b ,` })
-        }
-      } else {
-        handleCommand({ type: action.command, args: action.args || {}, raw: `Ctrl+b ${action.display}` })
-      }
-    }, [handleCommand, t]),
-    !isLevelComplete
-  )
+    const failure = result.errors[0] ?? null
+    setError(failure)
+    if (failure === null) return
+    resetCombo()
+    void shake.start(SHAKE)
+  }, [addCommand, incrementCombo, resetCombo, shake])
 
   // Validate after each command
   useEffect(() => {
-    if (!currentLevel || isLevelComplete || commandCount === 0) return
+    if (isLevelComplete || commandCount === 0) return
     if (validation.isComplete) {
       const stars = calculateStars(commandCount, currentLevel.optimalSteps, hintsUsed)
       markComplete(stars)
@@ -128,7 +109,7 @@ export function GameScreen() {
 
   // Detect newly completed objectives for flash effect
   useEffect(() => {
-    if (!currentLevel || commandCount === 0) return
+    if (commandCount === 0) return
     const newlyCompleted = validation.completedObjectives.filter(id => !prevCompleted.includes(id))
     if (newlyCompleted.length > 0) {
       setObjectiveFlash(true)
@@ -136,77 +117,17 @@ export function GameScreen() {
       const timer = setTimeout(() => setObjectiveFlash(false), 600)
       return () => clearTimeout(timer)
     }
-  }, [validation, currentLevel, commandCount, prevCompleted])
-
-  const handleSubmit = useCallback(() => {
-    if (!input.trim()) return
-    const trimmed = input.trim()
-    commandHistoryRef.current = [...commandHistoryRef.current, trimmed]
-    historyIndexRef.current = -1
-
-    const result = parser.parseInput(trimmed)
-    if (isParseError(result)) {
-      setError(result.message)
-      setOutput(prev => [...prev, `$ ${trimmed}`, `Error: ${result.message}`].slice(-50))
-      resetCombo()
-      setTerminalShake(true)
-      setTimeout(() => setTerminalShake(false), 400)
-    } else {
-      setOutput(prev => [...prev, `$ ${trimmed}`].slice(-50))
-      handleCommand(result)
-    }
-    setInput('')
-  }, [input, handleCommand, resetCombo])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleSubmit()
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      const history = commandHistoryRef.current
-      if (history.length === 0) return
-      const newIndex = historyIndexRef.current < 0
-        ? history.length - 1
-        : Math.max(0, historyIndexRef.current - 1)
-      historyIndexRef.current = newIndex
-      setInput(history[newIndex])
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (historyIndexRef.current < 0) return
-      const history = commandHistoryRef.current
-      const newIndex = historyIndexRef.current + 1
-      if (newIndex >= history.length) {
-        historyIndexRef.current = -1
-        setInput('')
-      } else {
-        historyIndexRef.current = newIndex
-        setInput(history[newIndex])
-      }
-    }
-  }, [handleSubmit])
+  }, [validation, commandCount, prevCompleted])
 
   const handleHint = () => {
-    if (!currentLevel || currentHintLevel >= 3) return
+    if (currentHintLevel >= 3) return
     const newLevel = (currentHintLevel + 1) as 1 | 2 | 3
     setCurrentHintLevel(newLevel)
     setShowHint(true)
     markHintUsed()
   }
 
-  const handleRetry = () => {
-    reset(currentLevel?.initialState)
-    resetLevel()
-    setOutput([])
-    setInput('')
-    setCurrentHintLevel(0)
-    setShowHint(false)
-    setError('')
-    setPrevCompleted([])
-  }
-
   const handleNextLevel = useCallback(() => {
-    if (!currentLevel) return
     const currentIndex = allLevels.findIndex(l => l.id === currentLevel.id)
     const next = currentIndex >= 0 ? allLevels[currentIndex + 1] : null
     if (next) {
@@ -216,10 +137,7 @@ export function GameScreen() {
     }
   }, [currentLevel, startLevel, setScreen])
 
-  if (!currentLevel) return null
-
-  const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
-  const activeWindow = activeSession?.windows[activeSession.activeWindowIndex]
+  const activeSession = state.isDetached ? null : getActiveSession(state)
   const efficiency = commandCount > 0 ? Math.round((currentLevel.optimalSteps / commandCount) * 100) : 100
   const quickRef = chapterQuickRef[currentLevel.chapter] || chapterQuickRef[1]
   const hasNextLevel = allLevels.findIndex(l => l.id === currentLevel.id) < allLevels.length - 1
@@ -304,8 +222,7 @@ export function GameScreen() {
             border: '1px solid #475569',
             boxShadow: '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
           }}
-          animate={terminalShake ? { x: [0, -4, 4, -3, 3, -1, 1, 0] } : { x: 0 }}
-          transition={{ duration: 0.4 }}
+          animate={shake}
         >
           {/* Terminal Title Bar */}
           <div
@@ -321,109 +238,12 @@ export function GameScreen() {
               <div className="w-3 h-3 rounded-full" style={{ background: '#22c55e' }} />
             </div>
             <span className="font-[family-name:var(--font-mono)] text-[11px] text-slate-500">
-              tmux — {activeSession ? `${activeSession.name}` : 'bash'}
+              tmux — {activeSession ? activeSession.name : 'bash'}
             </span>
           </div>
 
-          {/* Pane Visualization */}
-          <div className="flex-1 relative" style={{ padding: '8px' }}>
-            {state.isDetached ? (
-              <div className="flex items-center justify-center h-full font-[family-name:var(--font-mono)]" style={{ color: '#94a3b8' }}>
-                <div className="text-center">
-                  <div className="font-[family-name:var(--font-pixel)] text-lg" style={{ marginBottom: '8px', color: '#0ea5e9' }}>[detached]</div>
-                  <div className="text-sm" style={{ color: '#64748b' }}>Type `tmux attach` to reconnect</div>
-                </div>
-              </div>
-            ) : activeWindow ? (
-              <PaneRenderer tree={activeWindow.layoutTree} activePaneId={activeWindow.activePaneId} />
-            ) : null}
-          </div>
-
-          {/* Status Bar */}
-          {activeSession && !state.isDetached && <TmuxStatusBar session={activeSession} />}
-
-          {/* Command Output */}
-          <div
-            ref={outputRef}
-            className="overflow-y-auto font-[family-name:var(--font-mono)] text-xs leading-relaxed"
-            style={{
-              height: '128px',
-              padding: '8px 10px',
-              background: '#0f172a',
-              borderTop: '1px solid #334155',
-            }}
-          >
-            {output.length === 0 ? (
-              <div
-                className="h-full flex items-center justify-center"
-                style={{ color: '#334155', fontSize: '0.75rem', letterSpacing: '0.05em' }}
-              >
-                {t('game.outputPlaceholder')}
-              </div>
-            ) : output.slice(-20).map((line, i) => {
-              if (line.startsWith('Error')) {
-                return <div key={i} style={{ color: '#ef4444' }}>{line}</div>
-              }
-              if (line.startsWith('$ ')) {
-                return (
-                  <div key={i}>
-                    <span style={{ color: '#22c55e', fontWeight: 600 }}>$ </span>
-                    <span style={{ color: '#e2e8f0' }}>{line.slice(2)}</span>
-                  </div>
-                )
-              }
-              return <div key={i} style={{ color: '#64748b' }}>{line}</div>
-            })}
-          </div>
-
-          {/* Terminal Input */}
-          <div
-            className="flex items-center font-[family-name:var(--font-mono)] text-sm"
-            style={{
-              padding: '10px 12px',
-              background: 'linear-gradient(180deg, #1e293b, #172033)',
-              borderTop: '1px solid #334155',
-              transition: 'background 0.2s',
-            }}
-          >
-            <AnimatePresence>
-              {prefixActive && (
-                <motion.span
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  className="font-[family-name:var(--font-pixel)] text-xs animate-pulse"
-                  style={{
-                    marginRight: '8px',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(245, 158, 11, 0.4)',
-                    background: 'rgba(245, 158, 11, 0.15)',
-                    color: '#f59e0b',
-                  }}
-                >
-                  PREFIX
-                </motion.span>
-              )}
-            </AnimatePresence>
-            <span
-              className="font-[family-name:var(--font-mono)] font-bold"
-              style={{ marginRight: '6px', color: '#22c55e' }}
-            >
-              $
-            </span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1 bg-transparent outline-none"
-              style={{ color: '#e2e8f0', caretColor: '#22c55e' }}
-              placeholder={prefixActive ? t('game.prefixActive') : 'Type a tmux command...'}
-              autoFocus
-              disabled={isLevelComplete}
-            />
+          <div className="min-h-0 flex-1">
+            <TerminalView session={session} onResult={handleResult} disabled={isLevelComplete} />
           </div>
         </motion.div>
 
@@ -483,11 +303,11 @@ export function GameScreen() {
         <div className="flex items-center gap-2.5">
           {error && (
             <span className="font-[family-name:var(--font-ui)] text-xs mr-1 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
-              {error}
+              {formatError(t, error)}
             </span>
           )}
           <button
-            onClick={handleRetry}
+            onClick={onRetry}
             className="group text-xs font-[family-name:var(--font-ui)] font-medium px-4 py-2 rounded-xl cursor-pointer transition-all duration-200"
             style={{
               background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.1))',
@@ -545,7 +365,7 @@ export function GameScreen() {
 
       {/* Hint Display */}
       <AnimatePresence>
-        {showHint && currentLevel && currentHintLevel > 0 && (
+        {showHint && currentHintLevel > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -584,7 +404,7 @@ export function GameScreen() {
         currentLevel={currentLevel}
         commandCount={commandCount}
         hintsUsed={hintsUsed}
-        onRetry={handleRetry}
+        onRetry={onRetry}
         onNextLevel={handleNextLevel}
         hasNextLevel={hasNextLevel}
       />

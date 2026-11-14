@@ -3,10 +3,10 @@ import { fail, ok } from '../errors'
 import type { Result } from '../errors'
 import { flagValue, hasFlag } from '../argparse'
 import type { ParsedArgs } from '../argparse'
-import { normalizeKey, RESERVED_KEYS } from '../keymap'
 import { expandFormat, expandNames } from '../status-format'
 import { quoteWords, splitCommands, tokenize } from '../tokenize'
 import { findCommand } from './find'
+import { bindableKey, readKey } from './key-shared'
 import type { CommandOutcome, CommandSpec } from './types'
 
 type TableName = keyof KeyTables
@@ -30,17 +30,6 @@ function tableOf(args: ParsedArgs): Result<TableName> {
   const named = flagValue(args, 'T')
   if (named !== undefined) return tableNamed(named)
   return ok(hasFlag(args, 'n') ? 'root' : 'prefix')
-}
-
-function readKey(word: string): Result<KeyId> {
-  const key = normalizeKey(word)
-  return key === null ? fail('key.invalid', { key: word }) : ok(key)
-}
-
-function bindableKey(word: string): Result<KeyId> {
-  const key = readKey(word)
-  if (!key.ok) return key
-  return RESERVED_KEYS.includes(key.value) ? fail('key.reserved', { key: key.value }) : key
 }
 
 function withTable(state: TmuxState, table: TableName, bindings: KeyTables[TableName]): TmuxState {

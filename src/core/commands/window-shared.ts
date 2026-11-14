@@ -1,6 +1,6 @@
 import type { Session, TmuxState, Window } from '../types'
 import { allocId, createWindow, paneNode } from '../state'
-import { windowPanes } from '../selectors'
+import { locateWindow, windowPanes } from '../selectors'
 import { updateSession } from '../update'
 import type { CommandOutcome, RunContext } from './types'
 
@@ -14,6 +14,12 @@ export function buildWindow(state: TmuxState, name: string): { state: TmuxState;
 /** Makes the window at `index` the current window of a session; the client stays where it is. */
 export function selectWindowAt(state: TmuxState, sessionId: string, index: number): TmuxState {
   return updateSession(state, sessionId, session => ({ ...session, activeWindowIndex: index }))
+}
+
+/** Makes a window its session's current window, wherever it now sits. */
+export function showWindow(state: TmuxState, windowId: string): TmuxState {
+  const found = locateWindow(state, windowId)
+  return found ? selectWindowAt(state, found.session.id, found.index) : state
 }
 
 /** Runs the trailing words of `new-session` / `new-window` as a shell command in the new pane. */

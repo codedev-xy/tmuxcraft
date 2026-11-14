@@ -57,24 +57,45 @@ P2 定下的行为（P3 / P4 照此使用）：
 - shell 只支持 `;` 和 `&&`，管道和重定向报“模拟器暂不支持”。
 - 同步开启时，命令框输入的 shell 行广播到全部面板，`tmux …` 行除外。
 
-P2 留下、未处理的小重复（不影响行为，P3 顺手收）：
-- `showWindow`（`pane-shared.ts`）和 `selectWindowAt`（`window-shared.ts`）功能重复。
-- `deepFreeze` 在三个测试文件里各有一份。
-- 按键归一化 + 保留键检查在 `options.ts` 和 `keys.ts` 各有一份。
+P2 留下的小重复（P3 已收）：
+- [x] `showWindow` 和 `selectWindowAt` 重复：`showWindow` 移到 `window-shared.ts`，只留一份。
+- [x] `deepFreeze` 三份：测试共用一份。
+- [x] 按键归一化 + 保留键检查两份：收进 `commands/key-shared.ts`。
 
-P2 造成的临时状态（P3 / P4 解决）：
+P2 造成的临时状态：
 - 预设布局方向修正后，2-2 现有校验器是错的，P4 改写。
-- 旧引擎的 resize 现在每格移动 1%。
+- ~~旧引擎的 resize 每格移动 1%~~（旧引擎已在 P3 删除）。
 
 ## P3 切换到新引擎
 
-- [ ] `useTmuxSession`、`useKeyCapture` 接新引擎
-- [ ] 每关初始状态可加载的测试
-- [ ] 删除 `tmux-engine.ts`、`command-parser.ts`、`keybinding-handler.ts`、`useTmuxEngine.ts`
+- [x] `useTmuxSession`、`useKeyCapture` 接新引擎
+- [x] 每关初始状态可加载的测试（`levels/__tests__/levels-load.test.ts`）
+- [x] 删除 `tmux-engine.ts`、`command-parser.ts`、`keybinding-handler.ts`、`useTmuxEngine.ts` 及两份旧测试
+- [x] `game/sim/simulate.ts`：`applyInput(state, input)`，UI 和测试共用的唯一入口（原定 P4，提前做了）
+- [x] `i18n/format-error.ts`：错误码翻译成中英文，带“你是不是想输入…”
+- [x] `TerminalView`（面板、状态栏、输出、命令行、提示行、编辑器）闯关页和挑战页共用
+- [x] `types.ts` 删掉旧类型和 `@deprecated` 字段（`setOptions`、`sourcedFiles`、`cursorPosition`、`isZoomed`）
+
+P3 结果：lint 0 错误、`tsc -b` 通过、`npm run build` 通过、测试 1003 → 1107 全过（46 个文件；其中删掉了已在 P2 移植过的 113 个旧测试）。浏览器实测（1280×720，英文界面）：1-1 输入 `tmux new -s work` 通关并存档；1-2 和挑战页按 `Ctrl+b %` 得到两个等宽并排面板，状态栏和命令行位置正常，控制台无报错。
+
+P3 之后玩家能看到的变化：
+- 被 tmux 拒绝的命令不再计入命令数；单按前缀键、打开提示行、复制模式里移动光标也不计。
+- 重命名用 tmux 自己的提示行，不再弹 `window.prompt()`。
+- 脱离会话后显示 tmux 外面的终端，不再是写死的 “[detached]”。
+- 错误按界面语言显示，拼错命令时给出建议。
+- 挑战模式里前缀快捷键可用了。
+- 重试和换关是重新挂载一个终端，输出记录随之清空。
+
+P3 没做、留给后面的：
+- P4：关卡校验器还是旧逻辑。`levels-load` 测试记下的问题：2-2 开局即满足；1-10 只靠“至少一条命令”挡着；3-1 / 3-2 不检查选项和鼠标；1-4 关任意面板都过；2-4 真 join-pane 之后反而不过；3-4 初始没有 `~/.tmux.conf`；3-6 用 link-window 也过；3-7 要求每个窗口都改名。
+- P5：界面上拖拽边框、编辑器 Ctrl+S、复制模式吞掉所有按键（非 mac 的 Ctrl+R 等）、不再使用的 i18n key（`game.commandError`、`game.didYouMean`、`game.enterWindowName`）、写死的速查条目、其余内联样式。
+- P6：挑战页目标文字的语言跟 `user-store` 走，界面跟 i18n 检测器走，两者会不一致（实测英文界面下目标是中文）；难度仍固定为初级 60 秒。
+- 核心层几处错误码细节，P4 写文案时一起处理：`copy.notInMode` 从未抛出；`session.nested` 也被 `attach-session` 使用；`parse.unknownFlag` / `parse.missingArg` 不带命令名；`parse.ambiguousCommand` 的 `matches` 是拼好的字符串。
 
 ## P4 关卡改写
 
-- [ ] `game/sim/simulate.ts`、`levels/predicates.ts`
+- [x] `game/sim/simulate.ts`（P3 已完成）
+- [ ] `levels/predicates.ts`
 - [ ] 关卡表测试：初始不过关 / 空操作不过关 / 参考解法按 `optimalSteps` 过关 / 已知捷径不过关
 - [ ] i18n 测试：中英 key 一致，关卡引用的 key 都存在
 - [ ] 第一章 11 关
@@ -117,4 +138,5 @@ P2 造成的临时状态（P3 / P4 解决）：
 
 ## Review
 
-（每阶段结束后补充）
+- **P0–P2**：见各节的“结果”。
+- **P3**：界面已完全跑在新引擎上，旧引擎、旧解析器、旧按键处理器和它们的测试都删了。闯关页和挑战页共用一个 `TerminalView`，输入只走 `applyInput` 一条路，所以“算不算一条命令”“报什么错”两边一致。关卡校验器和文案没动，现在有些关卡比以前更容易或更难过（见 P3 “没做”一节），P4 修。浏览器里只测了 1-1、1-2 和挑战页初级的分屏，没测第三章的编辑器、复制模式和窄屏。

@@ -1,60 +1,31 @@
-import type { Session } from '@/core/types'
+import { renderStatus } from '@/core/status-format'
+import type { TmuxState } from '@/core/types'
+import { useClock } from '@/hooks/useClock'
+import { styleColours } from './status-style'
 
-interface TmuxStatusBarProps {
-  session?: Session
-}
+const DEFAULT_COLOURS = { background: '#1e293b', color: '#94a3b8' }
 
-export function TmuxStatusBar({ session }: TmuxStatusBarProps) {
-  if (!session) return null
-
-  const now = new Date()
-  const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+/** tmux's status line, drawn from the `status-*` options; nothing while detached or when `status` is off. */
+export function TmuxStatusBar({ state }: { state: TmuxState }) {
+  const status = renderStatus(state, useClock())
+  if (!status?.visible) return null
 
   return (
     <div
-      className="flex items-center justify-between font-[family-name:var(--font-mono)] text-xs"
-      style={{
-        padding: '4px 12px',
-        background: '#1e293b',
-        color: '#94a3b8',
-        borderTop: '1px solid #334155',
-      }}
+      data-testid="status-line"
+      data-position={status.position}
+      className="flex shrink-0 items-center justify-between whitespace-pre font-[family-name:var(--font-mono)] text-xs"
+      style={{ padding: '3px 10px', ...DEFAULT_COLOURS, ...styleColours(status.style) }}
     >
-      <div className="flex items-center" style={{ gap: '8px' }}>
-        <span
-          className="font-bold"
-          style={{
-            color: '#ffffff',
-            background: '#0ea5e9',
-            padding: '2px 8px',
-            borderRadius: '4px',
-            fontSize: '11px',
-          }}
-        >
-          [{session.name}]
-        </span>
-        {session.windows.map((win, i) => (
-          <span
-            key={win.id}
-            style={
-              i === session.activeWindowIndex
-                ? {
-                    color: '#0ea5e9',
-                    fontWeight: 700,
-                    borderBottom: '2px solid #0ea5e9',
-                    paddingBottom: '2px',
-                  }
-                : {
-                    color: '#94a3b8',
-                    transition: 'color 0.2s',
-                  }
-            }
-          >
-            {i}:{win.name}{i === session.activeWindowIndex ? '*' : ''}
+      <div className="flex min-w-0 gap-2">
+        <span>{status.left}</span>
+        {status.windows.map(window => (
+          <span key={window.index} className={window.current ? 'font-bold' : undefined}>
+            {`${window.index}:${window.name}${window.current ? '*' : ''}`}
           </span>
         ))}
       </div>
-      <span style={{ color: '#94a3b8' }}>{time}</span>
+      <span>{status.right}</span>
     </div>
   )
 }

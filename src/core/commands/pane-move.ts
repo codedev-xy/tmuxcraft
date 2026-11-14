@@ -11,7 +11,7 @@ import { resolvePane, resolveWindowSlot } from '../target'
 import type { WindowSlot } from '../target'
 import { insertWindow, mapPanes, removePane, updateWindow } from '../update'
 import type { CommandSpec } from './types'
-import { showWindow } from './pane-shared'
+import { showWindow } from './window-shared'
 
 /** The panes `swap-pane` exchanges as `[source, target]`, or null when `-U` / `-D` has no other pane. */
 function swapPair(state: TmuxState, args: ParsedArgs): Result<[Pane, Pane] | null> {

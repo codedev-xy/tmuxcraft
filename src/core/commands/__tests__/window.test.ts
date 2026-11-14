@@ -8,6 +8,7 @@ import { appendLog, appendPaneLines } from '../../update'
 import { windowPanes } from '../../selectors'
 import { errorOf, must, runLines, testEngine, tmux, TYPED } from '../../__tests__/harness'
 import { twoSessionState } from '../../__tests__/fixtures'
+import { deepFreeze } from '../../__tests__/shell-engine'
 import { SESSION_COMMANDS } from '../session'
 import { WINDOW_COMMANDS } from '../window'
 
@@ -19,14 +20,6 @@ const stubShell: ShellRunner = (state, paneId, line, ctx) => {
 }
 
 const ENGINE = testEngine([...SESSION_COMMANDS, ...WINDOW_COMMANDS], stubShell)
-
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.freeze(value)
-    Object.values(value).forEach(deepFreeze)
-  }
-  return value
-}
 
 const run = (state: TmuxState, line: string) => executeLine(state, line, TYPED, ENGINE)
 const after = (line: string, state: TmuxState = twoSessionState()) => must(run(state, line)).state

@@ -36,7 +36,6 @@ const level2_1: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['resize-pane', 'select-pane'],
   objectives: [
     {
       id: 'resize-to-70-30',
@@ -71,7 +70,6 @@ const level2_2: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['next-layout', 'select-layout'],
   objectives: [
     {
       id: 'even-horizontal-layout',
@@ -106,7 +104,6 @@ const level2_3: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['swap-pane', 'select-pane'],
   objectives: [
     {
       id: 'swap-panes',
@@ -140,7 +137,6 @@ const level2_4: LevelDefinition = {
     const sess = makeSession('s1', '0', [w1, w2], 0)
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['break-pane', 'join-pane', 'select-pane', 'select-window'],
   objectives: [
     {
       id: 'convert-pane-window',
@@ -174,7 +170,6 @@ const level2_5: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['enter-copy-mode', 'copy-selection', 'paste', 'select-pane'],
   objectives: [
     {
       id: 'copy-mode-complete',
@@ -208,7 +203,6 @@ const level2_6: LevelDefinition = {
     const sess = makeSession('s1', '0', [win])
     return makeState([sess], 's1')
   })(),
-  availableCommands: ['synchronize-panes', 'set-window-option'],
   objectives: [
     {
       id: 'sync-panes',
@@ -232,7 +226,6 @@ const level2_7: LevelDefinition = {
   descriptionKey: 'levels.2-7.description',
   type: 'navigation',
   initialState: singlePaneState('default'),
-  availableCommands: ['new-session', 'switch-session', 'rename-session', 'list-sessions'],
   objectives: [
     {
       id: 'create-named-sessions',
@@ -264,11 +257,6 @@ const level2_8: LevelDefinition = {
   descriptionKey: 'levels.2-8.description',
   type: 'workspace',
   initialState: singlePaneState(),
-  availableCommands: [
-    'new-session', 'new-window', 'rename-window', 'split-horizontal', 'split-vertical',
-    'select-pane', 'select-window', 'next-window', 'resize-pane', 'switch-session',
-    'synchronize-panes',
-  ],
   objectives: [
     {
       id: 'two-sessions',

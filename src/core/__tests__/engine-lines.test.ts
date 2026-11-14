@@ -7,7 +7,7 @@ import type { Session, TmuxState, Window } from '../types'
 import { errorOf } from './harness'
 import { deepFreeze, ENGINE, logNames, typeLines } from './shell-engine'
 
-// The legacy TmuxEngine suite, driven through the command box instead of hand-built ParsedCommand objects.
+// The engine's behaviour as a player meets it: every case goes through the command box.
 
 function session(state: TmuxState): Session {
   const active = getActiveSession(state)

@@ -1,111 +1,62 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PaneRenderer } from '@/components/game/PaneRenderer'
-import { TmuxStatusBar } from '@/components/game/TmuxStatusBar'
+import { TerminalView } from '@/components/game/TerminalView'
 import { Confetti } from '@/components/ui/Confetti'
-import { useTmuxEngine } from '@/hooks/useTmuxEngine'
-import { useKeyCapture } from '@/hooks/useKeyCapture'
-import { CommandParser } from '@/core/command-parser'
+import { useTmuxSession } from '@/hooks/useTmuxSession'
+import { defaultState } from '@/core/state'
+import type { InputResult } from '@/game/sim/simulate'
 import { generateChallenge } from '@/game/challenge/challenge-generator'
 import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
 import { useUserStore } from '@/store/user-store'
-import { isParseError } from '@/core/types'
-import type { ParsedCommand } from '@/core/types'
 import type { ChallengeGoal } from '@/game/level-types'
 
-const parser = new CommandParser()
 const TIME_LIMIT = 60
 
+/** The challenge screen. Every round gets a new goal, clock and terminal. */
 export function ChallengeScreen() {
+  const [round, setRound] = useState(0)
+  return <ChallengeRound key={round} onRetry={() => setRound(count => count + 1)} />
+}
+
+function ChallengeRound({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation()
   const setScreen = useGameStore(s => s.setScreen)
   const addChallengeRecord = useProgressStore(s => s.addChallengeRecord)
   const language = useUserStore(s => s.language)
 
-  const [goal, setGoal] = useState<ChallengeGoal>(() => generateChallenge('beginner', language))
+  const [goal] = useState<ChallengeGoal>(() => generateChallenge('beginner', language))
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT)
-  const [isRunning, setIsRunning] = useState(true)
   const [isComplete, setIsComplete] = useState(false)
-  const [isFailed, setIsFailed] = useState(false)
   const [commandCount, setCommandCount] = useState(0)
-  const [input, setInput] = useState('')
-  const [output, setOutput] = useState<string[]>([])
 
-  const { state, execute, reset } = useTmuxEngine()
+  const session = useTmuxSession(defaultState)
 
-  // Timer
+  const isFailed = timeLeft === 0 && !isComplete
+  const isRunning = timeLeft > 0 && !isComplete
+
   useEffect(() => {
     if (!isRunning) return
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          setIsRunning(false)
-          setIsFailed(true)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+    const interval = setInterval(() => setTimeLeft(left => Math.max(0, left - 1)), 1000)
     return () => clearInterval(interval)
   }, [isRunning])
 
-  const runCommand = useCallback((command: ParsedCommand) => {
-    const newState = execute(command)
-    const nextCount = commandCount + 1
-    setCommandCount(nextCount)
-    if (!goal.validate(newState)) return
-    setIsRunning(false)
+  const handleResult = (result: InputResult) => {
+    if (!result.counted) return
+    const count = commandCount + 1
+    setCommandCount(count)
+    if (!goal.validate(result.state)) return
     setIsComplete(true)
     addChallengeRecord({
       difficulty: 'beginner',
       completedAt: new Date().toISOString(),
       timeSeconds: TIME_LIMIT - timeLeft,
-      commandCount: nextCount,
+      commandCount: count,
       targetDescription: goal.description,
     })
-  }, [execute, goal, commandCount, timeLeft, addChallengeRecord])
-
-  const handleCommand = useCallback((raw: string) => {
-    const result = parser.parseInput(raw)
-    if (isParseError(result)) {
-      setOutput(prev => [...prev, `$ ${raw}`, `Error: ${result.message}`])
-    } else {
-      setOutput(prev => [...prev, `$ ${raw}`])
-      runCommand(result)
-    }
-  }, [runCommand])
-
-  useKeyCapture(
-    useCallback((action) => {
-      const result = parser.parseKeySequence('C-b', action.display)
-      if (!isParseError(result)) runCommand(result)
-    }, [runCommand]),
-    isRunning
-  )
-
-  const handleSubmit = () => {
-    if (!input.trim() || !isRunning) return
-    handleCommand(input.trim())
-    setInput('')
   }
 
-  const handleRetry = () => {
-    const newGoal = generateChallenge('beginner', language)
-    setGoal(newGoal)
-    reset()
-    setTimeLeft(TIME_LIMIT)
-    setIsRunning(true)
-    setIsComplete(false)
-    setIsFailed(false)
-    setCommandCount(0)
-    setOutput([])
-    setInput('')
-  }
-
-  const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
-  const activeWindow = activeSession?.windows[activeSession.activeWindowIndex]
   const isLastTen = timeLeft <= 10 && isRunning
 
   return (
@@ -166,7 +117,7 @@ export function ChallengeScreen() {
             color: '#64748b',
           }}
         >
-          CMD: <span style={{ color: '#0ea5e9', fontFamily: 'var(--font-pixel)' }}>{commandCount}</span>
+          CMD: <span data-testid="command-count" style={{ color: '#0ea5e9', fontFamily: 'var(--font-pixel)' }}>{commandCount}</span>
         </div>
       </div>
 
@@ -194,83 +145,18 @@ export function ChallengeScreen() {
         </p>
       </div>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ marginTop: '12px' }}>
-        {/* Terminal area - KEEP DARK */}
-        <div
-          className="flex-1 overflow-hidden"
-          style={{
-            margin: '0 16px',
-            borderRadius: '16px',
-            border: '1px solid #334155',
-            background: '#1e293b',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
-          }}
-        >
-          <div className="h-full" style={{ padding: '8px' }}>
-            {activeWindow && <PaneRenderer tree={activeWindow.layoutTree} activePaneId={activeWindow.activePaneId} />}
-          </div>
-        </div>
-
-        {activeSession && <TmuxStatusBar session={activeSession} />}
-
-        {/* Command output - keep dark for terminal realism */}
-        <div
-          className="overflow-y-auto font-[family-name:var(--font-mono)] text-xs leading-relaxed"
-          style={{
-            height: '80px',
-            margin: '8px 16px 0',
-            padding: '8px 10px',
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '12px',
-          }}
-        >
-          {output.length === 0 ? (
-            <div
-              className="h-full flex items-center justify-center"
-              style={{ color: '#334155', fontSize: '0.75rem', letterSpacing: '0.05em' }}
-            >
-              {t('game.outputPlaceholder')}
-            </div>
-          ) : output.slice(-8).map((line, i) => {
-            if (line.startsWith('Error')) {
-              return <div key={i} style={{ color: '#ef4444' }}>{line}</div>
-            }
-            if (line.startsWith('$ ')) {
-              return (
-                <div key={i}>
-                  <span style={{ color: '#22c55e', fontWeight: 600 }}>$ </span>
-                  <span style={{ color: '#e2e8f0' }}>{line.slice(2)}</span>
-                </div>
-              )
-            }
-            return <div key={i} style={{ color: '#64748b' }}>{line}</div>
-          })}
-        </div>
-
-        {/* Input - keep dark for terminal realism */}
-        <div
-          className="flex items-center font-[family-name:var(--font-mono)] text-sm"
-          style={{
-            margin: '8px 16px 12px',
-            padding: '10px 16px',
-            borderRadius: '12px',
-            background: 'linear-gradient(180deg, #1e293b, #172033)',
-            border: '1px solid #334155',
-          }}
-        >
-          <span className="font-[family-name:var(--font-mono)] font-bold" style={{ marginRight: '8px', color: '#22c55e' }}>$</span>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            className="flex-1 bg-transparent outline-none"
-            style={{ color: '#e2e8f0', caretColor: '#22c55e' }}
-            disabled={!isRunning}
-            autoFocus
-          />
-        </div>
+      {/* Terminal */}
+      <div
+        className="min-h-0 flex-1 overflow-hidden"
+        style={{
+          margin: '12px 16px',
+          borderRadius: '16px',
+          border: '1px solid #334155',
+          background: '#1e293b',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+        }}
+      >
+        <TerminalView session={session} onResult={handleResult} disabled={!isRunning} />
       </div>
 
       {/* Result Modal */}
@@ -397,7 +283,7 @@ export function ChallengeScreen() {
                   {t('challenge.backToMenu')}
                 </button>
                 <button
-                  onClick={handleRetry}
+                  onClick={onRetry}
                   className="font-[family-name:var(--font-ui)] font-bold px-7 py-3 text-[13px] rounded-2xl text-white border-none cursor-pointer transition-all duration-200"
                   style={{
                     background: isComplete

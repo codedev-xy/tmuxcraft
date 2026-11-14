@@ -90,6 +90,8 @@
     "retry": "重试",
     "backToLevels": "返回关卡列表",
     "prefixActive": "前缀键已激活，请按下一个键...",
+    "commandBox": "命令",
+    "commandPlaceholder": "输入命令，按回车执行",
     "commandError": "无效命令",
     "didYouMean": "你是不是想输入: {{command}}",
     "objectives": {
@@ -266,8 +268,78 @@
   "common": {
     "back": "返回",
     "close": "关闭",
+    "save": "保存",
     "confirm": "确定",
     "cancel": "取消",
     "loading": "加载中..."
+  },
+  "errors": {
+    "didYouMean": "你是不是想输入：{{command}}？",
+    "parse": {
+      "unknownCommand": "未知命令：{{command}}",
+      "ambiguousCommand": "命令 {{command}} 有歧义，可能是：{{matches}}。请多输入几个字母",
+      "unknownFlag": "未知参数：{{flag}}",
+      "missingArg": "{{flag}} 后面需要跟一个值",
+      "tooFewArgs": "{{command}}：参数太少",
+      "tooManyArgs": "{{command}}：参数太多（带空格的文字要用引号括起来）",
+      "badNumber": "不是有效的数字：{{value}}",
+      "unterminatedQuote": "引号没有闭合：每个 ' 或 \" 都要成对出现"
+    },
+    "command": {
+      "unsupported": "{{command}} 是真实的 tmux 命令，但模拟器暂不支持"
+    },
+    "state": {
+      "detached": "当前没有连接到任何会话，请先运行 tmux attach"
+    },
+    "target": {
+      "sessionNotFound": "找不到会话：{{target}}（可用 tmux ls 查看会话列表）",
+      "windowNotFound": "找不到窗口：{{target}}",
+      "paneNotFound": "找不到面板：{{target}}"
+    },
+    "session": {
+      "none": "tmux 服务器还没有运行，请先用 tmux new 创建会话",
+      "duplicate": "会话 {{name}} 已存在，请换个名字，或用 tmux attach -t {{name}} 连接它",
+      "nested": "你已经在 tmux 里了，不要嵌套会话：加上 -d 在后台创建，或先分离（tmux detach）",
+      "badName": "会话名无效：{{name}}（不能为空，也不能包含 : 或 .）"
+    },
+    "window": {
+      "indexInUse": "窗口编号 {{index}} 已被占用，请换一个空闲的编号"
+    },
+    "pane": {
+      "onlyOne": "只有一个面板时无法拆出面板，请先分割窗口",
+      "same": "源面板和目标面板不能是同一个",
+      "noSpace": "空间不足，无法再分割：面板太小了，请先放大它或关闭其他面板"
+    },
+    "layout": {
+      "unknown": "无效的布局：{{layout}}（可选 even-horizontal、even-vertical、main-horizontal、main-vertical 或 tiled）"
+    },
+    "option": {
+      "unknown": "无效的选项：{{option}}",
+      "unsupported": "{{option}} 是真实的 tmux 选项，但模拟器暂不支持",
+      "badValue": "选项 {{option}} 的值无效：{{value}}"
+    },
+    "key": {
+      "invalid": "无法识别的按键：{{key}}",
+      "reserved": "{{key}} 被浏览器占用，无法在网页里使用，请换一个键",
+      "unbound": "前缀键之后的 {{key}} 没有绑定任何命令",
+      "tableUnsupported": "不支持按键表 {{table}}，请使用 prefix 或 root"
+    },
+    "file": {
+      "notFound": "{{path}}：没有那个文件或目录"
+    },
+    "script": {
+      "depth": "{{path}}：文件嵌套层数过多（是不是文件在加载它自己？）"
+    },
+    "shell": {
+      "commandNotFound": "{{command}}：找不到命令",
+      "unsupported": "模拟器的 shell 不支持 {{token}}（管道和重定向）；如果要当作普通文字，请用引号括起来",
+      "missingOperand": "{{command}}：缺少文件名参数"
+    },
+    "buffer": {
+      "empty": "粘贴缓冲区是空的，请先复制一些文字"
+    },
+    "copy": {
+      "notInMode": "当前不在复制模式，请先进入复制模式（prefix [）"
+    }
   }
 }

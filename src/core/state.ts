@@ -8,7 +8,7 @@ export const HOME = '~'
 export const OUTER_PANE_ID = 'outer'
 
 export function createPane(id: string, content: readonly string[] = []): Pane {
-  return { id, content: [...content], input: '', cwd: HOME, cursorPosition: { row: 0, col: 0 }, isZoomed: false }
+  return { id, content: [...content], input: '', cwd: HOME }
 }
 
 export function paneNode(id: string, content: readonly string[] = []): LayoutNode {
@@ -48,8 +48,6 @@ export function emptyState(): TmuxState {
     prefixPending: false,
     outer: createPane(OUTER_PANE_ID),
     editing: null,
-    setOptions: {},
-    sourcedFiles: [],
   }
 }
 

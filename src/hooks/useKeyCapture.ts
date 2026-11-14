@@ -1,35 +1,29 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { KeybindingHandler } from '@/core/keybinding-handler'
-import type { KeyAction } from '@/core/types'
+import { useEffect, useRef } from 'react'
+import { keyFromEvent } from '@/core/keymap'
+import type { KeyId } from '@/core/types'
 
-export function useKeyCapture(onAction: (action: KeyAction) => void, enabled = true) {
-  const [prefixActive, setPrefixActive] = useState(false)
-  const handlerRef = useRef<KeybindingHandler | null>(null)
-  const onActionRef = useRef(onAction)
+/**
+ * Offers every key press to tmux first, in tmux notation. `onKey` returns true when tmux took the
+ * key; it is then kept from the page (the focused input, browser shortcuts).
+ */
+export function useKeyCapture(onKey: (key: KeyId) => boolean, enabled = true): void {
+  const onKeyRef = useRef(onKey)
 
   useEffect(() => {
-    onActionRef.current = onAction
-  }, [onAction])
+    onKeyRef.current = onKey
+  }, [onKey])
 
   useEffect(() => {
     if (!enabled) return
-    const handler = new KeybindingHandler()
-    handlerRef.current = handler
-    handler.onPrefixActivated = () => setPrefixActive(true)
-    handler.onPrefixTimeout = () => setPrefixActive(false)
-    handler.onKeybinding = (action) => {
-      setPrefixActive(false)
-      onActionRef.current(action)
+    const listener = (event: KeyboardEvent) => {
+      if (event.isComposing) return
+      const key = keyFromEvent(event)
+      if (key === null || !onKeyRef.current(key)) return
+      event.preventDefault()
+      event.stopPropagation()
     }
-    const onKeyDown = (e: KeyboardEvent) => handler.handleKeyDown(e)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      handler.destroy()
-    }
+    // Capture phase on window: ahead of the command box, which would otherwise type the key.
+    window.addEventListener('keydown', listener, true)
+    return () => window.removeEventListener('keydown', listener, true)
   }, [enabled])
-
-  const getHandler = useCallback(() => handlerRef.current, [])
-
-  return { prefixActive, getHandler }
 }
