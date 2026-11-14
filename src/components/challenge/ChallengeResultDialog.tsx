@@ -2,12 +2,18 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Confetti'
 import { Dialog } from '@/components/ui/Dialog'
+import { Pill } from '@/components/ui/Pill'
 import { Stat } from '@/components/ui/Stat'
+import type { ChallengeTask } from '@/game/level-types'
+import { ChallengeTaskList } from './ChallengeTaskList'
 
 interface ChallengeResultDialogProps {
   open: boolean
   success: boolean
-  goal: string
+  /** True when this round is the quickest so far at its difficulty. */
+  newBest: boolean
+  tasks: readonly ChallengeTask[]
+  done: readonly string[]
   seconds: number
   commandCount: number
   onRetry: () => void
@@ -28,7 +34,7 @@ function ResultIcon({ success }: { success: boolean }) {
 }
 
 /** The end of a challenge round, won or out of time. It is left through its buttons only. */
-export function ChallengeResultDialog({ open, success, goal, seconds, commandCount, onRetry, onBack }: ChallengeResultDialogProps) {
+export function ChallengeResultDialog({ open, success, newBest, tasks, done, seconds, commandCount, onRetry, onBack }: ChallengeResultDialogProps) {
   const { t } = useTranslation()
   return (
     <Dialog
@@ -38,7 +44,8 @@ export function ChallengeResultDialog({ open, success, goal, seconds, commandCou
       width="sm"
       icon={<ResultIcon success={success} />}
     >
-      <p className="mt-2 text-sm text-ink-muted">{goal}</p>
+      {newBest && <Pill tone="warning" solid className="mt-2">{t('challenge.newBest')}</Pill>}
+      <ChallengeTaskList tasks={tasks} done={done} className="mt-4" />
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Stat label={t('challenge.yourTime')} value={t('challenge.secondsValue', { count: seconds })} tone={success ? 'accent' : 'danger'} />
         <Stat label={t('challenge.commandsUsed')} value={commandCount} tone="accent" />

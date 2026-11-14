@@ -62,12 +62,19 @@ export interface LevelProgress {
 
 export type ChallengeDifficulty = 'beginner' | 'intermediate' | 'advanced'
 
+/** One thing a challenge asks for, shown as `t(key, params)`. */
+export interface ChallengeTask {
+  readonly id: string
+  readonly key: string                                   // i18n key under `challenge.tasks.*`
+  readonly params: Readonly<Record<string, string | number>>
+  readonly validate: (state: TmuxState) => boolean
+}
+
 export interface ChallengeGoal {
-  description: string
-  descriptionKey?: string
-  targetState: Partial<TmuxState>
-  validate: (state: TmuxState) => boolean
-  optimalSteps: number
+  readonly difficulty: ChallengeDifficulty
+  readonly tasks: readonly ChallengeTask[]
+  /** One way to do it from the default state; tests run it, and its length is the par. */
+  readonly solution: readonly PlayerInput[]
 }
 
 export interface ChallengeRecord {
@@ -75,7 +82,8 @@ export interface ChallengeRecord {
   completedAt: string               // ISO timestamp
   timeSeconds: number
   commandCount: number
-  targetDescription: string
+  /** Only in records saved before v2. */
+  targetDescription?: string
 }
 
 // ===== Validation =====

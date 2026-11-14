@@ -8,11 +8,9 @@ import { Dialog } from '@/components/ui/Dialog'
 import { PageBackground } from '@/components/ui/PageBackground'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { ALL_LEVELS } from '@/game/chapters'
+import { LANGUAGES, useLanguage } from '@/i18n/language'
 import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
-import { useUserStore } from '@/store/user-store'
-
-const LANGUAGES = ['zh', 'en'] as const
 
 function SectionTitle({ icon, children }: { icon: string; children: ReactNode }) {
   return (
@@ -24,13 +22,8 @@ function SectionTitle({ icon, children }: { icon: string; children: ReactNode })
 }
 
 function LanguageCard() {
-  const { t, i18n } = useTranslation()
-  const language = useUserStore(s => s.language)
-  const setLanguage = useUserStore(s => s.setLanguage)
-  const choose = (lang: typeof LANGUAGES[number]) => {
-    setLanguage(lang)
-    void i18n.changeLanguage(lang)
-  }
+  const { t } = useTranslation()
+  const [language, setLanguage] = useLanguage()
   return (
     <Card className="p-5 sm:p-6">
       <SectionTitle icon="🌐">{t('settings.language')}</SectionTitle>
@@ -41,7 +34,7 @@ function LanguageCard() {
             size="lg"
             variant={language === lang ? 'primary' : 'secondary'}
             aria-pressed={language === lang}
-            onClick={() => choose(lang)}
+            onClick={() => setLanguage(lang)}
           >
             {t(`settings.languageNames.${lang}`)}
           </Button>

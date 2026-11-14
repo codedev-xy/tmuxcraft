@@ -17,6 +17,6 @@ export function setProgress(...entries: LevelProgress[]) {
 }
 
 export function resetStores() {
-  useProgressStore.setState({ levelProgress: {}, achievements: [], challengeRecords: [], chaptersCompleted: [] })
+  useProgressStore.getState().resetProgress()
   useGameStore.setState({ currentScreen: 'home', currentLevel: null, currentChapter: 1 })
 }

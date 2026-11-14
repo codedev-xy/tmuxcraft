@@ -5,14 +5,12 @@ import i18n from '@/i18n'
 import { version } from '../../../../package.json'
 import { useGameStore } from '@/store/game-store'
 import { useProgressStore } from '@/store/progress-store'
-import { useUserStore } from '@/store/user-store'
 import { SettingsScreen } from '../SettingsScreen'
 
 const STARS = { completed: true, efficient: false, noHints: false }
 
 beforeEach(async () => {
   await i18n.changeLanguage('en')
-  useUserStore.getState().setLanguage('en')
   useGameStore.getState().setScreen('settings')
   useProgressStore.getState().resetProgress()
   useProgressStore.getState().completeLevel('1-1', STARS, 1)
@@ -32,11 +30,18 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('button', { name: '中文' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('switches the language in i18n and in the store', async () => {
+  it('shows a language chosen somewhere else', async () => {
+    await i18n.changeLanguage('zh')
+    open()
+    expect(screen.getByRole('button', { name: '中文' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('switches the language and remembers it', async () => {
     const user = open()
     await user.click(screen.getByRole('button', { name: '中文' }))
     expect(i18n.language).toBe('zh')
-    expect(useUserStore.getState().language).toBe('zh')
+    expect(localStorage.getItem('i18nextLng')).toBe('zh')
     expect(screen.getByRole('button', { name: '中文' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('设置')
   })

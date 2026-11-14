@@ -22,4 +22,10 @@ i18n
     },
   })
 
+const labelDocument = () => {
+  document.documentElement.lang = i18n.resolvedLanguage ?? 'zh'
+}
+labelDocument()
+i18n.on('languageChanged', labelDocument)
+
 export default i18n

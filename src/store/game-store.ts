@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { LevelDefinition, StarRating } from '@/game/level-types'
+import type { ChallengeDifficulty, LevelDefinition, StarRating } from '@/game/level-types'
 
 type Screen = 'home' | 'chapter-select' | 'level-select' | 'game' | 'challenge' | 'challenge-select' | 'reference' | 'settings'
 
@@ -7,6 +7,7 @@ interface GameState {
   currentScreen: Screen
   currentLevel: LevelDefinition | null
   currentChapter: number
+  challengeDifficulty: ChallengeDifficulty
   commandCount: number
   hintsUsed: number
   comboCount: number
@@ -17,6 +18,7 @@ interface GameState {
   setScreen: (screen: Screen) => void
   setChapter: (chapter: number) => void
   startLevel: (level: LevelDefinition) => void
+  startChallenge: (difficulty: ChallengeDifficulty) => void
   addCommand: () => void
   incrementCombo: () => void
   resetCombo: () => void
@@ -29,6 +31,7 @@ export const useGameStore = create<GameState>()((set) => ({
   currentScreen: 'home',
   currentLevel: null,
   currentChapter: 1,
+  challengeDifficulty: 'beginner',
   commandCount: 0,
   hintsUsed: 0,
   comboCount: 0,
@@ -49,6 +52,8 @@ export const useGameStore = create<GameState>()((set) => ({
     stars: { completed: false, efficient: false, noHints: false },
     currentScreen: 'game',
   }),
+
+  startChallenge: (difficulty) => set({ challengeDifficulty: difficulty, currentScreen: 'challenge' }),
 
   addCommand: () => set((s) => ({
     commandCount: s.commandCount + 1,

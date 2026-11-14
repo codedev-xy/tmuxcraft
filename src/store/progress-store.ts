@@ -1,104 +1,54 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { LevelProgress, StarRating, ChallengeRecord, ChallengeDifficulty } from '@/game/level-types'
+import type { ChallengeRecord, LevelProgress, StarRating } from '@/game/level-types'
+import { migrateProgress, PROGRESS_VERSION } from './progress-migrate'
+import type { SavedProgress } from './progress-migrate'
 
-interface ProgressState {
-  levelProgress: Record<string, LevelProgress>
-  achievements: string[]
-  challengeRecords: ChallengeRecord[]
-  chaptersCompleted: number[]
-
+interface ProgressState extends SavedProgress {
   completeLevel: (levelId: string, stars: StarRating, commandCount: number) => void
   addChallengeRecord: (record: ChallengeRecord) => void
-  getChapterProgress: (chapter: number) => { completed: number; total: number }
-  isChallengeUnlocked: (difficulty: ChallengeDifficulty) => boolean
-  getLeaderboard: (difficulty: ChallengeDifficulty) => ChallengeRecord[]
-  isLevelUnlocked: (levelId: string) => boolean
   resetProgress: () => void
 }
 
-const CHAPTER_SIZES: Record<number, number> = { 1: 11, 2: 8, 3: 7 }
+const EMPTY: SavedProgress = { levelProgress: {}, challengeRecords: [] }
+
+/** The level's record after one more clear: stars are only ever gained, and the best step count is kept. */
+function clearedOnceMore(previous: LevelProgress | undefined, levelId: string, stars: StarRating, commandCount: number): LevelProgress {
+  return {
+    levelId,
+    completed: true,
+    stars: {
+      completed: stars.completed || (previous?.stars.completed ?? false),
+      efficient: stars.efficient || (previous?.stars.efficient ?? false),
+      noHints: stars.noHints || (previous?.stars.noHints ?? false),
+    },
+    bestCommandCount: previous ? Math.min(previous.bestCommandCount, commandCount) : commandCount,
+    attempts: (previous?.attempts ?? 0) + 1,
+    completedAt: new Date().toISOString(),
+  }
+}
 
 export const useProgressStore = create<ProgressState>()(
   persist(
-    (set, get) => ({
-      levelProgress: {},
-      achievements: [],
-      challengeRecords: [],
-      chaptersCompleted: [],
+    set => ({
+      ...EMPTY,
 
-      completeLevel: (levelId, stars, commandCount) => {
-        const prev = get().levelProgress[levelId]
-        const progress: LevelProgress = {
-          levelId,
-          completed: true,
-          stars: {
-            completed: stars.completed || prev?.stars.completed || false,
-            efficient: stars.efficient || prev?.stars.efficient || false,
-            noHints: stars.noHints || prev?.stars.noHints || false,
-          },
-          bestCommandCount: prev ? Math.min(prev.bestCommandCount, commandCount) : commandCount,
-          attempts: (prev?.attempts || 0) + 1,
-          completedAt: new Date().toISOString(),
-        }
+      completeLevel: (levelId, stars, commandCount) => set(state => ({
+        levelProgress: {
+          ...state.levelProgress,
+          [levelId]: clearedOnceMore(state.levelProgress[levelId], levelId, stars, commandCount),
+        },
+      })),
 
-        const newProgress = { ...get().levelProgress, [levelId]: progress }
+      addChallengeRecord: record => set(state => ({ challengeRecords: [...state.challengeRecords, record] })),
 
-        // Check chapter completion
-        const chaptersCompleted = [...get().chaptersCompleted]
-        for (const [chapter, total] of Object.entries(CHAPTER_SIZES)) {
-          const chapterNum = parseInt(chapter)
-          const completed = Object.keys(newProgress).filter(id => {
-            const [ch] = id.split('-')
-            return parseInt(ch) === chapterNum && newProgress[id].completed
-          }).length
-          if (completed >= total && !chaptersCompleted.includes(chapterNum)) {
-            chaptersCompleted.push(chapterNum)
-          }
-        }
-
-        set({ levelProgress: newProgress, chaptersCompleted })
-      },
-
-      addChallengeRecord: (record) => {
-        set({ challengeRecords: [...get().challengeRecords, record] })
-      },
-
-      getChapterProgress: (chapter) => {
-        const total = CHAPTER_SIZES[chapter] || 0
-        const completed = Object.keys(get().levelProgress).filter(id => {
-          const [ch] = id.split('-')
-          return parseInt(ch) === chapter && get().levelProgress[id].completed
-        }).length
-        return { completed, total }
-      },
-
-      isChallengeUnlocked: () => true,
-
-      getLeaderboard: (difficulty) => {
-        return get().challengeRecords
-          .filter(r => r.difficulty === difficulty)
-          .sort((a, b) => a.timeSeconds - b.timeSeconds)
-      },
-
-      isLevelUnlocked: () => true,
-
-      resetProgress: () => set({
-        levelProgress: {},
-        achievements: [],
-        challengeRecords: [],
-        chaptersCompleted: [],
-      }),
+      resetProgress: () => set(EMPTY),
     }),
     {
       name: 'tmuxcraft-progress',
-      version: 2,
-      migrate: () => ({
-        levelProgress: {},
-        achievements: [],
-        challengeRecords: [],
-        chaptersCompleted: [],
-      }),
-    }
-  )
+      version: PROGRESS_VERSION,
+      migrate: migrateProgress,
+      partialize: ({ levelProgress, challengeRecords }) => ({ levelProgress, challengeRecords }),
+    },
+  ),
 )
