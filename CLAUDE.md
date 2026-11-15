@@ -120,6 +120,12 @@ Vitest (jsdom, `src/test-setup.ts` loads jest-dom) runs `src/**/*.{test,spec}.{t
 
 `@/` maps to `src/` (configured in both `vite.config.ts` and `tsconfig.app.json`).
 
+## Deployment
+
+Production is https://tmux.lflish.fun, a static site on the `tx` host (SSH alias). nginx (`/etc/nginx/sites-available/tmux.lflish.fun`) serves `/home/lflish/github/TmuxCraft/dist` directly, so the site is built on the server from a clone of this repo; nothing on `dmit`. The Let's Encrypt certificate of this domain is also used by other sites on that host — do not remove it.
+
+To deploy: push the branch, then on `tx` in that directory `git fetch` and switch to the commit, `npm ci`, `npx tsc -b`, `npx vite build --outDir dist.new --emptyOutDir`, make it world-readable (dirs 755, files 644: the clone's files are mode 600 and nginx runs as `www-data`), move the old `dist` aside as a backup and rename `dist.new` to `dist`. No nginx reload is needed. Check the live page loads the new `assets/index-*.js` and play one level.
+
 ## Failure Records
 
 Format: what failed → why → how to prevent.
@@ -127,3 +133,4 @@ Format: what failed → why → how to prevent.
 - **`npm install -D @vitest/coverage-v8@^4.0.18` crashed with `Cannot read properties of null (reading 'edgesOut')`** → the caret range resolved to 4.1.12 while `vitest` is locked at 4.0.18; npm 10's arborist crashed in `#loadPeerSet` at `node_modules/vitest` (most likely the version-matched peer dependency) and never reported a conflict. The same install pinned to 4.0.18 succeeded. → Install `@vitest/*` packages with `--save-exact` at the exact version of the installed vitest (`node -p "require('./node_modules/vitest/package.json').version"`), and upgrade vitest and its `@vitest/*` companions together in one command.
 - **A subagent ended with `API Error: Request rejected (429)` (rate limit) after 72 tool uses and returned no report** → five subagents were launched in parallel, each making many tool calls, and together they went over the account's rate limit. Its files were left without a final check (one test file did not type-check). → Launch at most three subagents at a time for long tasks. When one fails, do not assume its work is lost or finished: run `git status`, the tests and `tsc -b` on its files, then finish the rest directly or resume it with SendMessage.
 
+- **The first deploy to `tx` built the old code** → `git fetch` from GitHub failed there with `GnuTLS recv error (-110)` (the host's connection to GitHub is unreliable), and the remote script went on anyway: `set -e` does not stop on a failure inside a pipeline (`git fetch … | tail`), so `npm ci` and the build ran on the old checkout. Nothing went live because the build went to `dist.new`. → In remote deploy scripts use `set -eo pipefail`, retry `git fetch` a few times (the third try worked), assert `git rev-parse --short HEAD` equals the commit being deployed before building, and always build into a side directory and swap only after checking it.
